@@ -32,7 +32,11 @@ impl Image {
     /// * `height` - Height of the image in pixels
     /// * `data` - Vector of packed RGB pixels (length must equal width * height)
     pub fn new(width: u32, height: u32, data: Vec<u32>) -> Self {
-        Self { width, height, data }
+        Self {
+            width,
+            height,
+            data,
+        }
     }
 
     /// Compares two images and returns a difference image
@@ -140,7 +144,7 @@ pub fn file_to_image(path: &str) -> Result<Image, String> {
 /// * `Err(String)` - Error message if saving fails
 pub fn save_image(img: &Image, path: &str) -> Result<(), String> {
     let mut imgbuf = image::RgbImage::new(img.width, img.height);
-    
+
     for y in 0..img.height {
         for x in 0..img.width {
             let pixel_value = img.data[(y * img.width + x) as usize];
@@ -148,7 +152,7 @@ pub fn save_image(img: &Image, path: &str) -> Result<(), String> {
             imgbuf.put_pixel(x, y, image::Rgb([r as u8, g as u8, b as u8]));
         }
     }
-    
+
     imgbuf.save(path).map_err(|e| e.to_string())
 }
 
@@ -187,7 +191,10 @@ mod tests {
 
         // Assert: Should be an Error
         assert!(result.is_err());
-        assert_eq!(result.err(), Some("Images have different dimensions".to_string()));
+        assert_eq!(
+            result.err(),
+            Some("Images have different dimensions".to_string())
+        );
     }
 
     #[test]
@@ -204,22 +211,22 @@ mod tests {
         // Assert
         // 1. FF0000 - 000000 = FF0000
         // 2. FFFFFF - 0000FF = FFFF00 (Red diff=FF, Green diff=FF, Blue diff=0)
-        assert_eq!(result.data[0], 0xFF0000); 
+        assert_eq!(result.data[0], 0xFF0000);
         assert_eq!(result.data[1], 0xFFFF00);
     }
-    
+
     #[test]
     fn test_compare_channel_borrowing() {
         // This test proves why we need channel-wise math.
         // If we just did (p1 - p2), 0x010000 - 0x00FFFF would be 1 (Blue).
         // Correctly, it should be: Red diff=1, Green diff=255, Blue diff=255.
-        
+
         let img1 = Image::new(1, 1, vec![0x010000]); // Red = 1
         let img2 = Image::new(1, 1, vec![0x00FFFF]); // Green=255, Blue=255
 
         let result = Image::compare(&img1, &img2).unwrap();
 
-        // Expected: 
+        // Expected:
         // R: |1 - 0| = 1
         // G: |0 - 255| = 255 (FF)
         // B: |0 - 255| = 255 (FF)
