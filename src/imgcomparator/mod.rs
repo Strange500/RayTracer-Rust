@@ -1,84 +1,154 @@
+//! Image comparison module for ray tracer
+//!
+//! This module provides utilities for loading, comparing, and saving images.
+//! Images are represented in RGB format with 8 bits per channel, packed into u32.
+
 use image::GenericImageView;
 use std::path::Path;
 
-// Added Debug and PartialEq to allow assert_eq!(img1, img2) in tests
-#[derive(Debug, PartialEq)] 
+// Bit shift and mask constants for RGB channel extraction
+const RED_SHIFT: u32 = 16;
+const GREEN_SHIFT: u32 = 8;
+const CHANNEL_MASK: u32 = 0xFF;
+
+/// Represents an RGB image with packed pixel data
+///
+/// Each pixel is stored as a u32 in the format 0x00RRGGBB where:
+/// - RR: Red channel (8 bits)
+/// - GG: Green channel (8 bits)
+/// - BB: Blue channel (8 bits)
+#[derive(Debug, PartialEq)]
 pub struct Image {
     pub width: u32,
     pub height: u32,
-    pub data: Vec<u32>, 
+    pub data: Vec<u32>,
 }
 
 impl Image {
-    // Made public so tests/users can create images manually
+    /// Creates a new Image with the specified dimensions and pixel data
+    ///
+    /// # Arguments
+    /// * `width` - Width of the image in pixels
+    /// * `height` - Height of the image in pixels
+    /// * `data` - Vector of packed RGB pixels (length must equal width * height)
     pub fn new(width: u32, height: u32, data: Vec<u32>) -> Self {
         Self { width, height, data }
     }
 
-    pub fn compare(img1 : &Image, img2 : &Image) -> Result<Image, String> {
+    /// Compares two images and returns a difference image
+    ///
+    /// For each pixel, calculates the absolute difference for each RGB channel.
+    /// If images have different dimensions, returns an error.
+    ///
+    /// # Arguments
+    /// * `img1` - First image to compare
+    /// * `img2` - Second image to compare
+    ///
+    /// # Returns
+    /// * `Ok(Image)` - Difference image where each channel contains the absolute difference
+    /// * `Err(String)` - Error message if dimensions don't match
+    pub fn compare(img1: &Image, img2: &Image) -> Result<Image, String> {
         if img1.height != img2.height || img1.width != img2.width {
             return Err("Images have different dimensions".to_string());
         }
-        
-        let mut diff_pixels : Vec<u32> = Vec::with_capacity(img1.data.len());
-        
+
+        let mut diff_pixels: Vec<u32> = Vec::with_capacity(img1.data.len());
+
         for (p1, p2) in img1.data.iter().zip(&img2.data) {
-            if *p1 != *p2 {
-                // FIXED: Calculate difference for each channel separately
-                // to avoid "borrowing" errors across bytes.
-                let r1 = (p1 >> 16) & 0xFF;
-                let g1 = (p1 >> 8) & 0xFF;
-                let b1 = p1 & 0xFF;
+            let diff = if *p1 != *p2 {
+                // Extract RGB channels from each pixel
+                let (r1, g1, b1) = extract_rgb(*p1);
+                let (r2, g2, b2) = extract_rgb(*p2);
 
-                let r2 = (p2 >> 16) & 0xFF;
-                let g2 = (p2 >> 8) & 0xFF;
-                let b2 = p2 & 0xFF;
+                // Calculate absolute difference for each channel
+                let r_diff = (r1 as i32 - r2 as i32).unsigned_abs();
+                let g_diff = (g1 as i32 - g2 as i32).unsigned_abs();
+                let b_diff = (b1 as i32 - b2 as i32).unsigned_abs();
 
-                let r_diff = (r1 as i32 - r2 as i32).abs() as u32;
-                let g_diff = (g1 as i32 - g2 as i32).abs() as u32;
-                let b_diff = (b1 as i32 - b2 as i32).abs() as u32;
-
-                // Re-pack into u32
-                let diff = (r_diff << 16) | (g_diff << 8) | b_diff;
-                diff_pixels.push(diff);
+                // Pack differences back into RGB pixel
+                pack_rgb(r_diff, g_diff, b_diff)
             } else {
-                diff_pixels.push(0);
-            }
+                0
+            };
+            diff_pixels.push(diff);
         }
-        
+
         Ok(Image::new(img1.width, img1.height, diff_pixels))
     }
 }
 
-pub fn file_to_image(path : &str) -> Result<Image, String> {
-    // Note: Usually hard to test without mocking file system, 
-    // so we rely on integration tests or manual checks for this.
-    let img = image::open(&Path::new(path)).map_err(|e| e.to_string())?;
+/// Extracts RGB channels from a packed pixel value
+///
+/// # Arguments
+/// * `pixel` - Packed RGB pixel in 0x00RRGGBB format
+///
+/// # Returns
+/// Tuple of (red, green, blue) channel values
+#[inline]
+fn extract_rgb(pixel: u32) -> (u32, u32, u32) {
+    let r = (pixel >> RED_SHIFT) & CHANNEL_MASK;
+    let g = (pixel >> GREEN_SHIFT) & CHANNEL_MASK;
+    let b = pixel & CHANNEL_MASK;
+    (r, g, b)
+}
+
+/// Packs RGB channel values into a single pixel value
+///
+/// # Arguments
+/// * `r` - Red channel value (0-255)
+/// * `g` - Green channel value (0-255)
+/// * `b` - Blue channel value (0-255)
+///
+/// # Returns
+/// Packed RGB pixel in 0x00RRGGBB format
+#[inline]
+fn pack_rgb(r: u32, g: u32, b: u32) -> u32 {
+    (r << RED_SHIFT) | (g << GREEN_SHIFT) | b
+}
+
+/// Loads an image from a file
+///
+/// # Arguments
+/// * `path` - Path to the image file
+///
+/// # Returns
+/// * `Ok(Image)` - Successfully loaded image
+/// * `Err(String)` - Error message if loading fails
+pub fn file_to_image(path: &str) -> Result<Image, String> {
+    let img = image::open(Path::new(path)).map_err(|e| e.to_string())?;
     let (width, height) = img.dimensions();
-    let mut data = Vec::new();
+    let mut data = Vec::with_capacity((width * height) as usize);
+
     for y in 0..height {
         for x in 0..width {
             let pixel = img.get_pixel(x, y);
-            let pixel_value = ((pixel[0] as u32) << 16) |
-                              ((pixel[1] as u32) << 8)  |
-                              (pixel[2] as u32);
+            let pixel_value = pack_rgb(pixel[0] as u32, pixel[1] as u32, pixel[2] as u32);
             data.push(pixel_value);
         }
     }
     Ok(Image::new(width, height, data))
 }
 
-pub fn save_image(img : &Image, path : &str) -> Result<(), String> {
+/// Saves an image to a file
+///
+/// # Arguments
+/// * `img` - Image to save
+/// * `path` - Destination file path
+///
+/// # Returns
+/// * `Ok(())` - Image saved successfully
+/// * `Err(String)` - Error message if saving fails
+pub fn save_image(img: &Image, path: &str) -> Result<(), String> {
     let mut imgbuf = image::RgbImage::new(img.width, img.height);
+    
     for y in 0..img.height {
         for x in 0..img.width {
             let pixel_value = img.data[(y * img.width + x) as usize];
-            let r = ((pixel_value >> 16) & 0xFF) as u8;
-            let g = ((pixel_value >> 8) & 0xFF) as u8;
-            let b = (pixel_value & 0xFF) as u8;
-            imgbuf.put_pixel(x, y, image::Rgb([r, g, b]));
+            let (r, g, b) = extract_rgb(pixel_value);
+            imgbuf.put_pixel(x, y, image::Rgb([r as u8, g as u8, b as u8]));
         }
     }
+    
     imgbuf.save(path).map_err(|e| e.to_string())
 }
 
