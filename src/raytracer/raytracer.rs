@@ -1,9 +1,7 @@
-use glam::Vec3;
-
-use crate::load_config_file;
 use crate::raytracer::config::Config;
 use crate::raytracer::config::Ray;
-use crate::raytracer::config::Shape;
+use crate::imgcomparator::Image;
+
 pub struct RayTracer {
     config: Config,
 }
@@ -12,7 +10,7 @@ impl RayTracer {
     pub fn new(config: Config) -> Self {
         RayTracer { config }
     }
-    pub fn main(&self) {
+    pub fn render(&self) -> Result<Image, String> {
         let mut image_data = vec![0u32; (self.config.width * self.config.height) as usize];
         let camera_vector = self.config.camera.direction().normalize();
         let normal_to_plane = camera_vector.cross(self.config.camera.up).normalize();
@@ -33,17 +31,11 @@ impl RayTracer {
                 image_data[(y * self.config.width + x) as usize] = color;
             }
         }
+        Ok(Image::new(self.config.width, self.config.height, image_data))
+    }
 
-        println!("Generated image of size {}x{}", self.config.width, self.config.height);
-        crate::imgcomparator::save_image(
-            &crate::imgcomparator::Image {
-                width: self.config.width,
-                height: self.config.height,
-                data: image_data,
-            },
-            &self.config.output_file,
-        )
-        .unwrap();
+    pub fn get_output_path(&self) -> &str {
+        &self.config.output_file
     }
 
     fn find_color(&self, origin: glam::Vec3, direction: glam::Vec3) -> u32 {
@@ -65,17 +57,14 @@ mod tests {
     use super::*;
     use crate::imgcomparator::{Image};
     use crate::imgcomparator::file_to_image;
+    use crate::raytracer::load_config_file;
     #[test]
     fn test_raytracer_tp31() {
         let config = load_config_file("test_file/jalon3/tp31.test").expect("Failed to load configuration");
         let ray_tracer = RayTracer::new(config);
-        ray_tracer.main();
-        let generated_image = file_to_image("tp31.png").expect("Failed to load generated image");
+        let generated_image = ray_tracer.render().expect("Failed to render image");
         let expected_image = file_to_image("test_file/jalon3/tp31.png").expect("Failed to load expected image");
-        let diff_image = Image::compare(&generated_image, &expected_image).expect("Failed to compare images");
-        // Check that the diff image is all black
-        for &pixel in &diff_image.data {
-            assert_eq!(pixel, 0, "Images differ!");
-        }
+        let (diff, _img) = Image::compare(&generated_image, &expected_image).expect("Failed to compare images");
+        assert_eq!(diff, 0, "Images differ! See tp31_diff.png for details.");
     }
 }

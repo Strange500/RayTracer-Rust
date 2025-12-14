@@ -6,7 +6,16 @@ use raytracer::load_config_file;
 // Assuming Config looks like: struct Config { width: u32, ... }
 
 fn main() {
-    let config = load_config_file("tp31.test").expect("Failed to load configuration");
+    let config = load_config_file("test.scene").expect("Failed to load configuration");
     let ray_tracer = raytracer::RayTracer::new(config);
-    ray_tracer.main();
+    let image = ray_tracer.render();
+    match image {
+        Ok(img) => {
+            imgcomparator::save_image(&img, ray_tracer.get_output_path()).expect("Failed to save image");
+            println!("Image rendered and saved to output.png");
+        }
+        Err(e) => {
+            eprintln!("Error during rendering: {}", e);
+        }
+    }
 }

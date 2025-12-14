@@ -51,12 +51,13 @@ impl Image {
     /// # Returns
     /// * `Ok(Image)` - Difference image where each channel contains the absolute difference
     /// * `Err(String)` - Error message if dimensions don't match
-    pub fn compare(img1: &Image, img2: &Image) -> Result<Image, String> {
+    pub fn compare(img1: &Image, img2: &Image) -> Result<(u128, Image), String> {
         if img1.height != img2.height || img1.width != img2.width {
             return Err("Images have different dimensions".to_string());
         }
 
         let mut diff_pixels: Vec<u32> = Vec::with_capacity(img1.data.len());
+        let mut total_diff: u128 = 0;
 
         for (p1, p2) in img1.data.iter().zip(&img2.data) {
             let diff = if *p1 != *p2 {
@@ -74,10 +75,13 @@ impl Image {
             } else {
                 0
             };
+            if diff != 0 {
+                total_diff += 1;
+            }
             diff_pixels.push(diff);
         }
 
-        Ok(Image::new(img1.width, img1.height, diff_pixels))
+        Ok((total_diff, Image::new(img1.width, img1.height, diff_pixels)))
     }
 }
 
@@ -175,7 +179,7 @@ mod tests {
 
         // Assert: Should be Ok, and data should be all 0s
         assert!(result.is_ok());
-        let diff_img = result.unwrap();
+        let (_diff, diff_img) = result.unwrap();
         assert_eq!(diff_img.data, vec![0, 0, 0]);
         assert_eq!(diff_img.width, 3);
     }
@@ -206,13 +210,13 @@ mod tests {
         let img2 = Image::new(2, 1, vec![0x000000, 0x0000FF]);
 
         // Act
-        let result = Image::compare(&img1, &img2).unwrap();
+        let (_diff, img) = Image::compare(&img1, &img2).unwrap();
 
         // Assert
         // 1. FF0000 - 000000 = FF0000
         // 2. FFFFFF - 0000FF = FFFF00 (Red diff=FF, Green diff=FF, Blue diff=0)
-        assert_eq!(result.data[0], 0xFF0000);
-        assert_eq!(result.data[1], 0xFFFF00);
+        assert_eq!(img.data[0], 0xFF0000);
+        assert_eq!(img.data[1], 0xFFFF00);
     }
 
     #[test]
@@ -224,13 +228,13 @@ mod tests {
         let img1 = Image::new(1, 1, vec![0x010000]); // Red = 1
         let img2 = Image::new(1, 1, vec![0x00FFFF]); // Green=255, Blue=255
 
-        let result = Image::compare(&img1, &img2).unwrap();
+        let (_diff, img) = Image::compare(&img1, &img2).unwrap();
 
         // Expected:
         // R: |1 - 0| = 1
         // G: |0 - 255| = 255 (FF)
         // B: |0 - 255| = 255 (FF)
         // Result: 0x01FFFF
-        assert_eq!(result.data[0], 0x01FFFF);
+        assert_eq!(img.data[0], 0x01FFFF);
     }
 }
