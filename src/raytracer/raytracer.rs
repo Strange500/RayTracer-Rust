@@ -70,7 +70,7 @@ mod tests {
     use crate::imgcomparator::save_image;
     use crate::raytracer::load_config_file;
 
-    const SAVE_DIFF_IMAGES: bool = true;
+    const SAVE_DIFF_IMAGES: bool = false;
 
     #[test]
     fn test_raytracer_tp31() {
