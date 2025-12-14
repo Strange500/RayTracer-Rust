@@ -1,1 +1,3 @@
 /target
+test_file/*_diff.png
+test_file/*_generated.png
