@@ -6,11 +6,20 @@ pub trait Intersectable {
 pub struct Sphere {
     pub center: Vec3,
     pub radius: f32,
+    diffuse_color: Vec3,
+    specular_color: Vec3,
+    shininess: f32,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32) -> Self {
-        Sphere { center, radius }
+    pub fn new(center: Vec3, radius: f32, diffuse_color: Vec3, specular_color: Vec3, shininess: f32) -> Self {
+        Sphere {
+            center,
+            radius,
+            diffuse_color,
+            specular_color,
+            shininess,
+        }
     }    
 }
 

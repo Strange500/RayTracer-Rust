@@ -1,6 +1,6 @@
 use glam::Vec3;
-use crate::raytracer::config::shapes::Sphere::Sphere;
-
+use crate::raytracer::config::shapes::sphere::Sphere;
+use crate::raytracer::config::shapes::sphere::Intersectable;
 pub enum Shape {
     Sphere(Sphere),
     // Plane(Plane),
@@ -16,7 +16,7 @@ impl Shape {
     // Helper method to dispatch the call
     pub fn intersect(&self, ray: &Ray) -> Option<f32> {
         match self {
-            Shape::Sphere(s) => (s as &dyn crate::raytracer::config::shapes::Sphere::Intersectable).intersect(ray),
+            Shape::Sphere(s) => (s as &dyn Intersectable).intersect(ray),
             // Shape::Plane(p) => p.intersect(ray),
             // Shape::Triangle(t) => t.intersect(ray),
         }
