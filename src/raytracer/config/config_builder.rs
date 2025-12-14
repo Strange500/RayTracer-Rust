@@ -1,19 +1,16 @@
 use crate::raytracer::config::camera::Camera;
 use crate::raytracer::config::light::Light;
 use crate::raytracer::config::shape::Shape;
-use crate::raytracer::config::shapes::sphere::{Sphere};
+use crate::raytracer::config::shapes::sphere::Sphere;
 
 use glam::Vec3;
 use std::fs::File;
 use std::io::{self, BufRead};
 
-
 const COMMENT_CHAR: char = '#';
 const DEFAULT_DIFFUSE_COLOR: Vec3 = Vec3::ZERO;
 const DEFAULT_SPECULAR_COLOR: Vec3 = Vec3::ZERO;
 const DEFAULT_SHININESS: f32 = 10.0;
-
-
 
 pub struct Config {
     pub width: u32,
@@ -49,6 +46,9 @@ impl Config {
         );
         println!("Number of Scene Objects: {}", self.scene_objects.len());
         println!("Number of Lights: {}", self.lights.len());
+    }
+    pub fn get_scene_objects(&self) -> &Vec<Shape> {
+        &self.scene_objects
     }
 }
 
@@ -222,7 +222,13 @@ fn parse_sphere(_value: &str) -> Result<Sphere, String> {
     if radius <= 0.0 {
         return Err("Sphere radius must be greater than zero".to_string());
     }
-    Ok(Sphere::new(center, radius, DEFAULT_DIFFUSE_COLOR, DEFAULT_SPECULAR_COLOR, DEFAULT_SHININESS))
+    Ok(Sphere::new(
+        center,
+        radius,
+        DEFAULT_DIFFUSE_COLOR,
+        DEFAULT_SPECULAR_COLOR,
+        DEFAULT_SHININESS,
+    ))
 }
 
 // test

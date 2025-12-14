@@ -6,17 +6,7 @@ use raytracer::load_config_file;
 // Assuming Config looks like: struct Config { width: u32, ... }
 
 fn main() {
-    println!("RayTracer Rust - Image Comparator");
-    
-    // We don't assign to 'result' because the arms do different things (one fails, one succeeds)
-    match load_config_file("test.scene") {
-        Ok(config) => {
-            // Logic when successful
-            config.print_summary();
-        }
-        Err(e) => {
-            // Logic when failed
-            eprintln!("Failed to load configuration: {}", e);
-        }
-    }
+    let config = load_config_file("tp31.test").expect("Failed to load configuration");
+    let ray_tracer = raytracer::RayTracer::new(config);
+    ray_tracer.main();
 }

@@ -6,3 +6,9 @@ pub struct Camera {
     pub(crate) up: Vec3,
     pub(crate) fov: f32,
 }
+
+impl Camera {
+    pub fn direction(&self) -> Vec3 {
+        (self.look_at - self.position).normalize()
+    }
+}
