@@ -93,7 +93,7 @@ impl Image {
 /// # Returns
 /// Tuple of (red, green, blue) channel values
 #[inline]
-fn extract_rgb(pixel: u32) -> (u32, u32, u32) {
+pub fn extract_rgb(pixel: u32) -> (u32, u32, u32) {
     let r = (pixel >> RED_SHIFT) & CHANNEL_MASK;
     let g = (pixel >> GREEN_SHIFT) & CHANNEL_MASK;
     let b = pixel & CHANNEL_MASK;

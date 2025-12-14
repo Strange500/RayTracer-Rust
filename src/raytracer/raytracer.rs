@@ -1,6 +1,6 @@
+use crate::imgcomparator::{Image};
 use crate::raytracer::config::Config;
 use crate::raytracer::config::Ray;
-use crate::imgcomparator::Image;
 
 pub struct RayTracer {
     config: Config,
@@ -31,7 +31,11 @@ impl RayTracer {
                 image_data[(y * self.config.width + x) as usize] = color;
             }
         }
-        Ok(Image::new(self.config.width, self.config.height, image_data))
+        Ok(Image::new(
+            self.config.width,
+            self.config.height,
+            image_data,
+        ))
     }
 
     pub fn get_output_path(&self) -> &str {
@@ -39,10 +43,16 @@ impl RayTracer {
     }
 
     fn find_color(&self, origin: glam::Vec3, direction: glam::Vec3) -> u32 {
-        let ray : Ray = Ray { origin, direction };
+        let ray: Ray = Ray { origin, direction };
+        let ambient = self.config.ambient;
+        let rgb = (
+            (ambient.x * 255.0) as u32,
+            (ambient.y * 255.0) as u32,
+            (ambient.z * 255.0) as u32,
+        );
         for object in self.config.get_scene_objects() {
             if let Some(t) = object.intersect(&ray) {
-                return (255 << 24) | (255 << 16) | (0 << 8) | 0;
+                return (255 << 24) | (rgb.0 << 16) | (rgb.1 << 8) | rgb.2;
             }
         }
 
@@ -55,16 +65,55 @@ impl RayTracer {
 mod tests {
     // load test_file/jalon3/tp31.test and tp31.png and run the raytracer
     use super::*;
-    use crate::imgcomparator::{Image};
     use crate::imgcomparator::file_to_image;
+    use crate::imgcomparator::Image;
+    use crate::imgcomparator::save_image;
     use crate::raytracer::load_config_file;
+
+    const SAVE_DIFF_IMAGES: bool = true;
+
     #[test]
     fn test_raytracer_tp31() {
-        let config = load_config_file("test_file/jalon3/tp31.test").expect("Failed to load configuration");
+        test_file("test_file/jalon3/tp31");
+    }
+    #[test]
+    fn test_raytracer_tp32() {
+        test_file("test_file/jalon3/tp32");
+    }
+
+    #[test]
+    fn test_raytracer_tp33() {
+        test_file("test_file/jalon3/tp33");
+    }
+
+    #[test]
+    fn test_raytracer_tp34() {
+        test_file("test_file/jalon3/tp34");
+    }
+
+    #[test]
+    fn test_raytracer_tp35() {
+        test_file("test_file/jalon3/tp35");
+    }
+
+    fn test_file(path: &str) {
+        let scene_file = format!("{}.test", path);
+        let expected_image_file = format!("{}.png", path);
+        let config = load_config_file(&scene_file).expect("Failed to load configuration");
         let ray_tracer = RayTracer::new(config);
         let generated_image = ray_tracer.render().expect("Failed to render image");
-        let expected_image = file_to_image("test_file/jalon3/tp31.png").expect("Failed to load expected image");
-        let (diff, _img) = Image::compare(&generated_image, &expected_image).expect("Failed to compare images");
-        assert_eq!(diff, 0, "Images differ! See tp31_diff.png for details.");
+        let expected_image =
+            file_to_image(&expected_image_file).expect("Failed to load expected image");
+        let (diff, img) =
+            Image::compare(&generated_image, &expected_image).expect("Failed to compare images");
+        if SAVE_DIFF_IMAGES {
+            let diff_image_path = format!("{}_diff.png", path);
+            save_image(&img, &diff_image_path)
+                .expect("Failed to save diff image");
+            let generated_image_path = format!("{}_generated.png", path);
+            save_image(&generated_image, &generated_image_path)
+                .expect("Failed to save generated image");
+        }
+        assert_eq!(diff, 0, "Images differ! See {}_diff.png for details.", path);
     }
 }
