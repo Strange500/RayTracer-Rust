@@ -205,9 +205,9 @@ fn check_rgb_values(r: f32, g: f32, b: f32) -> Result<(), String> {
     Ok(())
 }
 
-fn parse_sphere(_value: &str) -> Result<Sphere, String> {
+fn parse_sphere(value: &str) -> Result<Sphere, String> {
     // position + radius
-    let params: Vec<&str> = _value.split(' ').collect();
+    let params: Vec<&str> = value.split(' ').collect();
     if params.len() != 4 {
         return Err("Invalid sphere format".to_string());
     }
