@@ -1,5 +1,5 @@
-use glam::Vec3;
 use crate::raytracer::config::shape::Ray;
+use glam::Vec3;
 pub trait Intersectable {
     fn intersect(&self, ray: &Ray) -> Option<f32>;
 }
@@ -12,7 +12,13 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, diffuse_color: Vec3, specular_color: Vec3, shininess: f32) -> Self {
+    pub fn new(
+        center: Vec3,
+        radius: f32,
+        diffuse_color: Vec3,
+        specular_color: Vec3,
+        shininess: f32,
+    ) -> Self {
         Sphere {
             center,
             radius,
@@ -20,11 +26,10 @@ impl Sphere {
             specular_color,
             shininess,
         }
-    }    
+    }
 }
 
 impl Intersectable for Sphere {
-
     fn intersect(&self, ray: &Ray) -> Option<f32> {
         let oc = ray.origin - self.center;
         let a = ray.direction.dot(ray.direction);

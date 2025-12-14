@@ -121,9 +121,7 @@ fn parse_line(line: &str, config: &mut Config) -> Result<(), String> {
                 // TODO
             }
             _ => {
-                // Return the error immediately to stop the function
-                //return Err(format!("Unknown configuration key: {}", parts[0]));
-                println!("Unknown configuration key: {}", parts[0]);
+                return Err(format!("Unknown configuration key: {}", parts[0]));
             }
         }
     }

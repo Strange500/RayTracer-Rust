@@ -1,4 +1,4 @@
-use crate::imgcomparator::{Image};
+use crate::imgcomparator::Image;
 use crate::raytracer::config::Config;
 use crate::raytracer::config::Ray;
 
@@ -50,14 +50,19 @@ impl RayTracer {
             (ambient.y * 255.0) as u32,
             (ambient.z * 255.0) as u32,
         );
+        let mut closest_distance = f32::MAX;
         for object in self.config.get_scene_objects() {
             if let Some(t) = object.intersect(&ray) {
-                return (255 << 24) | (rgb.0 << 16) | (rgb.1 << 8) | rgb.2;
+                if t < closest_distance {
+                    closest_distance = t;
+                }
             }
         }
-
-        // No hit -> return background (opaque black)
-        (255 << 24) | (0 << 16) | (0 << 8) | 0
+        if closest_distance < f32::MAX {
+            (255 << 24) | (rgb.0 << 16) | (rgb.1 << 8) | rgb.2
+        } else {
+            (255 << 24) | (0 << 16) | (0 << 8) | 0
+        }
     }
 }
 
@@ -66,8 +71,8 @@ mod tests {
     // load test_file/jalon3/tp31.test and tp31.png and run the raytracer
     use super::*;
     use crate::imgcomparator::file_to_image;
-    use crate::imgcomparator::Image;
     use crate::imgcomparator::save_image;
+    use crate::imgcomparator::Image;
     use crate::raytracer::load_config_file;
 
     const SAVE_DIFF_IMAGES: bool = false;
@@ -108,8 +113,7 @@ mod tests {
             Image::compare(&generated_image, &expected_image).expect("Failed to compare images");
         if SAVE_DIFF_IMAGES {
             let diff_image_path = format!("{}_diff.png", path);
-            save_image(&img, &diff_image_path)
-                .expect("Failed to save diff image");
+            save_image(&img, &diff_image_path).expect("Failed to save diff image");
             let generated_image_path = format!("{}_generated.png", path);
             save_image(&generated_image, &generated_image_path)
                 .expect("Failed to save generated image");

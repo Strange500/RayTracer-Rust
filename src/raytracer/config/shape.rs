@@ -1,6 +1,6 @@
-use glam::Vec3;
-use crate::raytracer::config::shapes::sphere::Sphere;
 use crate::raytracer::config::shapes::sphere::Intersectable;
+use crate::raytracer::config::shapes::sphere::Sphere;
+use glam::Vec3;
 pub enum Shape {
     Sphere(Sphere),
     // Plane(Plane),

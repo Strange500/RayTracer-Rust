@@ -11,7 +11,8 @@ fn main() {
     let image = ray_tracer.render();
     match image {
         Ok(img) => {
-            imgcomparator::save_image(&img, ray_tracer.get_output_path()).expect("Failed to save image");
+            imgcomparator::save_image(&img, ray_tracer.get_output_path())
+                .expect("Failed to save image");
             println!("Image rendered and saved to output.png");
         }
         Err(e) => {
