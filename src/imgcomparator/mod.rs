@@ -69,9 +69,13 @@ impl Image {
                 let r_diff = (r1 as i32 - r2 as i32).unsigned_abs();
                 let g_diff = (g1 as i32 - g2 as i32).unsigned_abs();
                 let b_diff = (b1 as i32 - b2 as i32).unsigned_abs();
-
-                // Pack differences back into RGB pixel
-                pack_rgb(r_diff, g_diff, b_diff)
+                println!("Diff R:{} G:{} B:{}", r_diff, g_diff, b_diff);
+                // return 0 if diff is < 1 per channel
+                if r_diff <= 1 && g_diff <= 1 && b_diff <= 1 {
+                    0
+                } else {
+                    pack_rgb(r_diff, g_diff, b_diff)
+                }
             } else {
                 0
             };

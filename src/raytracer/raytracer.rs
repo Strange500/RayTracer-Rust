@@ -26,7 +26,7 @@ impl RayTracer {
                 // Compute normalized device coordinates
                 let a = (pixel_width * ((x as f32 + 0.5) - img_width_by_2)) / img_width_by_2;
                 let b = (pixel_height * (img_height_by_2 - (y as f32 + 0.5))) / img_height_by_2;
-                let d = (normal_to_plane * a + v * b - camera_vector).normalize();
+                let d = (normal_to_plane * a + v * b + camera_vector).normalize();
                 let color = self.find_color(self.config.camera.position, d);
                 image_data[(y * self.config.width + x) as usize] = color;
             }
