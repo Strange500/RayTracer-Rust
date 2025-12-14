@@ -319,12 +319,20 @@ mod tests {
 
     #[test]
     fn test_parse_camera_invalid_fov() {
-        // FOV too low
+        // FOV too low (0 is invalid, must be >= 1)
         assert!(parse_camera("0.0 0.0 150.0 0.0 0.0 5.0 0.0 1.0 0.0 0").is_err());
-        // FOV too high
+        // FOV too high (180 is invalid, must be <= 179)
         assert!(parse_camera("0.0 0.0 150.0 0.0 0.0 5.0 0.0 1.0 0.0 180").is_err());
         // Negative FOV
         assert!(parse_camera("0.0 0.0 150.0 0.0 0.0 5.0 0.0 1.0 0.0 -45").is_err());
+    }
+
+    #[test]
+    fn test_parse_camera_valid_fov_boundaries() {
+        // FOV at minimum boundary (1 degree)
+        assert!(parse_camera("0.0 0.0 150.0 0.0 0.0 5.0 0.0 1.0 0.0 1").is_ok());
+        // FOV at maximum boundary (179 degrees)
+        assert!(parse_camera("0.0 0.0 150.0 0.0 0.0 5.0 0.0 1.0 0.0 179").is_ok());
     }
 
     #[test]
