@@ -63,7 +63,7 @@ impl RayTracer {
                 // lambertian shading
                 let light_dir = match light {
                     Point { position, .. } => (*position - intersection.point).normalize(),
-                    Directional { direction, .. } => (-*direction).normalize(),
+                    Directional { direction, .. } => direction.normalize(),
                 };
                 let light_intensity = light.color();
                 let lambertian = intersection.normal.dot(light_dir).max(0.0);
@@ -120,6 +120,25 @@ mod tests {
     #[test]
     fn test_raytracer_tp41dir() {
         test_file("test_file/jalon4/tp41-dir");
+    }
+
+    #[test]
+    fn test_raytracer_tp41point() {
+        test_file("test_file/jalon4/tp41-point");
+    }
+
+    #[test]
+    fn test_raytracer_tp42dir() {
+        test_file("test_file/jalon4/tp42-dir");
+    }
+    #[test]
+    fn test_raytracer_tp42point() {
+        test_file("test_file/jalon4/tp42-point");
+    }
+
+    #[test]
+    fn test_raytracer_tp43() {
+        test_file("test_file/jalon4/tp43");
     }
 
     fn test_file(path: &str) {

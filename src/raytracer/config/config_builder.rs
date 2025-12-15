@@ -29,6 +29,49 @@ impl Config {
     pub fn get_lights(&self) -> &Vec<Light> {
         &self.lights
     }
+
+    pub fn println_config(&self) {
+        println!("Config:");
+        println!(" Size: {}x{}", self.width, self.height);
+        println!(" Output file: {}", self.output_file);
+        println!(
+            " Camera: position({:?}), look_at({:?}), up({:?}), fov({})",
+            self.camera.position, self.camera.look_at, self.camera.up, self.camera.fov
+        );
+        println!(" Ambient light: {:?}", self.ambient);
+        for (i, obj) in self.scene_objects.iter().enumerate() {
+            match obj {
+                Shape::Sphere {
+                    center,
+                    radius,
+                    diffuse_color,
+                    specular_color,
+                    shininess,
+                } => {
+                    println!(
+                        " Object {}: Sphere - center({:?}), radius({}), diffuse_color({:?}), specular_color({:?}), shininess({})",
+                        i, center, radius, diffuse_color, specular_color, shininess
+                    );
+                }
+            }
+        }
+        for (i, light) in self.lights.iter().enumerate() {
+            match light {
+                Light::Point { position, color } => {
+                    println!(
+                        " Light {}: Point - position({:?}), color({:?})",
+                        i, position, color
+                    );
+                }
+                Light::Directional { direction, color } => {
+                    println!(
+                        " Light {}: Directional - direction({:?}), color({:?})",
+                        i, direction, color
+                    );
+                }
+            }
+        }
+    }
 }
 
 pub struct ParsedConfigState {
