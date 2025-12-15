@@ -1,4 +1,6 @@
 use crate::imgcomparator::Image;
+use crate::raytracer::config::light::Light::{Directional, Point};
+use crate::raytracer::config::shape::Shape::Sphere;
 use crate::raytracer::config::Config;
 use crate::raytracer::config::Ray;
 
@@ -45,23 +47,35 @@ impl RayTracer {
     fn find_color(&self, origin: glam::Vec3, direction: glam::Vec3) -> u32 {
         let ray: Ray = Ray { origin, direction };
         let ambient = self.config.ambient;
-        let rgb = (
-            (ambient.x * 255.0) as u32,
-            (ambient.y * 255.0) as u32,
-            (ambient.z * 255.0) as u32,
-        );
-        let mut closest_distance = f32::MAX;
-        for object in self.config.get_scene_objects() {
-            if let Some(t) = object.intersect(&ray) {
-                if t < closest_distance {
-                    closest_distance = t;
-                }
+        let closest_intersection = self
+            .config
+            .get_scene_objects()
+            .iter()
+            .filter_map(|object| object.intersect(&ray))
+            .min_by(|a, b| {
+                a.distance
+                    .partial_cmp(&b.distance)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+        if let Some(intersection) = closest_intersection {
+            let mut final_color = ambient;
+            for light in self.config.get_lights() {
+                // lambertian shading
+                let light_dir = match light {
+                    Point { position, .. } => (*position - intersection.point).normalize(),
+                    Directional { direction, .. } => *direction,
+                };
+                let light_intensity = light.color();
+                let lambertian = intersection.normal.dot(light_dir).max(0.0);
+                let diffuse = &intersection.diffuse_color;
+                final_color += diffuse * light_intensity * lambertian;
             }
-        }
-        if closest_distance < f32::MAX {
-            (255 << 24) | (rgb.0 << 16) | (rgb.1 << 8) | rgb.2
+            let r = (final_color.x * 255.0).min(255.0) as u32;
+            let g = (final_color.y * 255.0).min(255.0) as u32;
+            let b = (final_color.z * 255.0).min(255.0) as u32;
+            (255 << 24) | (r << 16) | (g << 8) | b
         } else {
-            (255 << 24) | (0 << 16) | (0 << 8) | 0
+            255 << 24
         }
     }
 }
@@ -73,9 +87,9 @@ mod tests {
     use crate::imgcomparator::file_to_image;
     use crate::imgcomparator::save_image;
     use crate::imgcomparator::Image;
-    use crate::raytracer::load_config_file;
+    use crate::raytracer::ParsedConfigState;
 
-    const SAVE_DIFF_IMAGES: bool = false;
+    const SAVE_DIFF_IMAGES: bool = true;
 
     #[test]
     fn test_raytracer_tp31() {
@@ -101,10 +115,37 @@ mod tests {
         test_file("test_file/jalon3/tp35");
     }
 
+    #[test]
+    fn test_raytracer_tp41dir() {
+        test_file("test_file/jalon4/tp41-dir");
+    }
+
+    #[test]
+    fn test_raytracer_tp41point() {
+        test_file("test_file/jalon4/tp41-point");
+    }
+
+    #[test]
+    fn test_raytracer_tp42dir() {
+        test_file("test_file/jalon4/tp42-dir");
+    }
+    #[test]
+    fn test_raytracer_tp42point() {
+        test_file("test_file/jalon4/tp42-point");
+    }
+
+    #[test]
+    fn test_raytracer_tp43() {
+        test_file("test_file/jalon4/tp43");
+    }
+
     fn test_file(path: &str) {
-        let scene_file = format!("{}.test", path);
-        let expected_image_file = format!("{}.png", path);
-        let config = load_config_file(&scene_file).expect("Failed to load configuration");
+        let scene_file = format!("{path}.test");
+        let expected_image_file = format!("{path}.png");
+        let mut parsed_config = ParsedConfigState::new();
+        let config = parsed_config
+            .load_config_file(&scene_file)
+            .expect("Failed to load configuration");
         let ray_tracer = RayTracer::new(config);
         let generated_image = ray_tracer.render().expect("Failed to render image");
         let expected_image =
@@ -112,12 +153,12 @@ mod tests {
         let (diff, img) =
             Image::compare(&generated_image, &expected_image).expect("Failed to compare images");
         if SAVE_DIFF_IMAGES {
-            let diff_image_path = format!("{}_diff.png", path);
+            let diff_image_path = format!("{path}_diff.png");
             save_image(&img, &diff_image_path).expect("Failed to save diff image");
-            let generated_image_path = format!("{}_generated.png", path);
+            let generated_image_path = format!("{path}_generated.png");
             save_image(&generated_image, &generated_image_path)
                 .expect("Failed to save generated image");
         }
-        assert_eq!(diff, 0, "Images differ! See {}_diff.png for details.", path);
+        assert_eq!(diff, 0, "Images differ! See {path}_diff.png for details.");
     }
 }
