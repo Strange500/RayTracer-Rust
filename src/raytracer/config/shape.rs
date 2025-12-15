@@ -21,7 +21,7 @@ pub struct Intersection {
     pub distance: f32,
     pub normal: Vec3,
     pub point: Vec3,
-    pub shape: Shape,
+    pub diffuse_color: Vec3,
 }
 
 impl Shape {
@@ -31,46 +31,40 @@ impl Shape {
             Shape::Sphere { .. } => intersect_sphere(ray, self),
         }
     }
-
-    pub fn get_diffuse_color(&self) -> Vec3 {
-        match self {
-            // 3. Use .. to ignore fields we don't need here
-            Shape::Sphere { diffuse_color, .. } => *diffuse_color,
-        }
-    }
 }
 
 fn intersect_sphere(ray: &Ray, sphere: &Shape) -> Option<Intersection> {
-    // 4. Use if let to destruct the sphere fields we need for math
-    if let Shape::Sphere { center, radius, .. } = sphere {
-        let oc = ray.origin - *center;
-        let a = ray.direction.dot(ray.direction);
-        let b = 2.0 * oc.dot(ray.direction);
-        let c = oc.dot(oc) - radius * radius;
-        let discriminant = b * b - 4.0 * a * c;
+    let Shape::Sphere {
+        center,
+        radius,
+        diffuse_color,
+        ..
+    } = sphere;
 
-        if discriminant < 0.0 {
-            None
-        } else {
-            // Calculate nearest intersection
-            let t = (-b - discriminant.sqrt()) / (2.0 * a);
+    let oc = ray.origin - *center;
+    // Performance: Assume ray.direction is normalized (length = 1.0)
+    // Using simplified quadratic formula: t = -half_b ± sqrt(discriminant)
+    // where half_b = oc.dot(ray.direction), discriminant = half_b² - c
+    let half_b = oc.dot(ray.direction);
+    let c = oc.dot(oc) - radius * radius;
+    let discriminant = half_b * half_b - c;
 
-            if t < 0.0 {
-                return None;
-            }
-
-            let point = ray.origin + ray.direction * t;
-            let normal = (point - *center).normalize();
-
-            Some(Intersection {
-                distance: t,
-                normal,
-                point,
-                // 5. Since we derived Clone/Copy, we can dereference or clone here
-                shape: *sphere,
-            })
-        }
-    } else {
+    if discriminant < 0.0 {
         None
+    } else {
+        // Calculate nearest intersection using simplified formula
+        let t = -half_b - discriminant.sqrt();
+        if t < 0.0 {
+            return None;
+        }
+        let point = ray.origin + ray.direction * t;
+        let normal = (point - *center).normalize();
+
+        Some(Intersection {
+            distance: t,
+            normal,
+            point,
+            diffuse_color: *diffuse_color,
+        })
     }
 }

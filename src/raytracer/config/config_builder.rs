@@ -240,7 +240,10 @@ impl ParsedConfigState {
 
         ParsedConfigState::check_rgb_values(color.x, color.y, color.z)?;
 
-        Ok(Light::Directional { direction, color })
+        Ok(Light::Directional {
+            direction: direction.normalize(),
+            color,
+        })
     }
 
     fn parse_camera(&self, value: &str) -> Result<Camera, String> {

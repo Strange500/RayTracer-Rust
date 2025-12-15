@@ -17,7 +17,7 @@ fn main() {
             println!("Image rendered and saved to output.png");
         }
         Err(e) => {
-            eprintln!("Error during rendering: {}", e);
+            eprintln!("Error during rendering: {e}");
         }
     }
 }
