@@ -2,11 +2,12 @@
 mod imgcomparator;
 mod raytracer;
 
-use raytracer::load_config_file;
+use raytracer::ParsedConfigState;
 // Assuming Config looks like: struct Config { width: u32, ... }
 
 fn main() {
-    let config = load_config_file("test.scene").expect("Failed to load configuration");
+    let mut parsed_config = ParsedConfigState::new();
+    let config = parsed_config.load_config_file("test.scene").expect("Failed to load configuration");
     let ray_tracer = raytracer::RayTracer::new(config);
     let image = ray_tracer.render();
     match image {

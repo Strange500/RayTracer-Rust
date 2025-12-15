@@ -1,4 +1,4 @@
 mod config;
 mod raytracer;
-pub use config::load_config_file;
+pub use config::ParsedConfigState;
 pub use raytracer::RayTracer;
