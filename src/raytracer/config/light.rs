@@ -13,8 +13,7 @@ pub enum Light {
 impl Light {
     pub fn color(&self) -> Vec3 {
         match self {
-            Light::Point { color, .. } => *color,
-            Light::Directional { color, .. } => *color,
+            Light::Point { color, .. } | Light::Directional { color, .. } => *color,
         }
     }
 }

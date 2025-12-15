@@ -1,6 +1,5 @@
 use crate::imgcomparator::Image;
 use crate::raytracer::config::light::Light::{Directional, Point};
-use crate::raytracer::config::shape::{Shape::Sphere};
 use crate::raytracer::config::Config;
 use crate::raytracer::config::Ray;
 
@@ -19,14 +18,19 @@ impl RayTracer {
         let v = normal_to_plane.cross(camera_vector).normalize();
         let fovrad = self.config.camera.fov * std::f32::consts::PI / 180.0;
         let pixel_height = (fovrad / 2.0).tan();
+        #[allow(clippy::cast_precision_loss)]
         let pixel_width = pixel_height * (self.config.width as f32 / self.config.height as f32);
 
+        #[allow(clippy::cast_precision_loss)]
         let img_width_by_2 = self.config.width as f32 / 2.0;
+        #[allow(clippy::cast_precision_loss)]
         let img_height_by_2 = self.config.height as f32 / 2.0;
         for y in 0..self.config.height {
             for x in 0..self.config.width {
                 // Compute normalized device coordinates
+                #[allow(clippy::cast_precision_loss)]
                 let a = (pixel_width * ((x as f32 + 0.5) - img_width_by_2)) / img_width_by_2;
+                #[allow(clippy::cast_precision_loss)]
                 let b = (pixel_height * (img_height_by_2 - (y as f32 + 0.5))) / img_height_by_2;
                 let d = (normal_to_plane * a + v * b + camera_vector).normalize();
                 let color = self.find_color(self.config.camera.position, d);
@@ -63,21 +67,24 @@ impl RayTracer {
                 // lambertian shading
                 let light_dir = match light {
                     Point { position, .. } => (*position - intersection.point).normalize(),
-                    Directional { direction, .. } => direction.normalize(),
+                    Directional { direction, .. } => *direction, // Already normalized during parsing
                 };
                 let light_intensity = light.color();
                 let lambertian = intersection.normal.dot(light_dir).max(0.0);
-                let diffuse = match &intersection.shape {
-                    Sphere { diffuse_color, .. } => *diffuse_color,
-                };
+                let diffuse = intersection.diffuse_color;
                 final_color += diffuse * light_intensity * lambertian;
             }
+            // Clamp and convert to u32. The min(255.0) ensures no truncation beyond 255.
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let r = (final_color.x * 255.0).min(255.0) as u32;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let g = (final_color.y * 255.0).min(255.0) as u32;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let b = (final_color.z * 255.0).min(255.0) as u32;
             (255 << 24) | (r << 16) | (g << 8) | b
         } else {
-            (255 << 24) | (0 << 16) | (0 << 8) | 0
+            // Black color with full alpha
+            255 << 24
         }
     }
 }
@@ -142,8 +149,8 @@ mod tests {
     }
 
     fn test_file(path: &str) {
-        let scene_file = format!("{}.test", path);
-        let expected_image_file = format!("{}.png", path);
+        let scene_file = format!("{path}.test");
+        let expected_image_file = format!("{path}.png");
         let mut parsed_config = ParsedConfigState::new();
         let config = parsed_config
             .load_config_file(&scene_file)
@@ -155,12 +162,12 @@ mod tests {
         let (diff, img) =
             Image::compare(&generated_image, &expected_image).expect("Failed to compare images");
         if SAVE_DIFF_IMAGES {
-            let diff_image_path = format!("{}_diff.png", path);
+            let diff_image_path = format!("{path}_diff.png");
             save_image(&img, &diff_image_path).expect("Failed to save diff image");
-            let generated_image_path = format!("{}_generated.png", path);
+            let generated_image_path = format!("{path}_generated.png");
             save_image(&generated_image, &generated_image_path)
                 .expect("Failed to save generated image");
         }
-        assert_eq!(diff, 0, "Images differ! See {}_diff.png for details.", path);
+        assert_eq!(diff, 0, "Images differ! See {path}_diff.png for details.");
     }
 }
