@@ -63,7 +63,7 @@ impl RayTracer {
                 // lambertian shading
                 let light_dir = match light {
                     Point { position, .. } => (*position - intersection.point).normalize(),
-                    Directional { direction, .. } => (-*direction).normalize(),
+                    Directional { direction, .. } => direction.normalize(),
                 };
                 let light_intensity = light.color();
                 let lambertian = intersection.normal.dot(light_dir).max(0.0);

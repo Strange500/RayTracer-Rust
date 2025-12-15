@@ -27,12 +27,13 @@ impl Shape {
     // Helper method to dispatch the call
     pub fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         match self {
-            Shape::Sphere { center, radius, .. } => intersect_sphere(ray, *center, *radius),
+            Shape::Sphere { center, radius, diffuse_color, specular_color, shininess } => 
+                intersect_sphere(ray, *center, *radius, *diffuse_color, *specular_color, *shininess),
         }
     }
 }
 
-fn intersect_sphere(ray: &Ray, center: Vec3, radius: f32) -> Option<Intersection> {
+fn intersect_sphere(ray: &Ray, center: Vec3, radius: f32, diffuse_color: Vec3, specular_color: Vec3, shininess: f32) -> Option<Intersection> {
     let oc = ray.origin - center;
     let a = ray.direction.dot(ray.direction);
     let b = 2.0 * oc.dot(ray.direction);
@@ -55,9 +56,9 @@ fn intersect_sphere(ray: &Ray, center: Vec3, radius: f32) -> Option<Intersection
             shape: Shape::Sphere {
                 center,
                 radius,
-                diffuse_color: Vec3::ZERO,
-                specular_color: Vec3::ZERO,
-                shininess: 0.0,
+                diffuse_color,
+                specular_color,
+                shininess,
             },
         })
     }
