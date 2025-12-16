@@ -153,9 +153,10 @@ pub fn render(&self) -> Result<Image, String> {
                 final_color += reflected_color * intersection.specular_color;
             }
             
-            let r = (final_color.x * 255.0).min(255.0) as u32;
-            let g = (final_color.y * 255.0).min(255.0) as u32;
-            let b = (final_color.z * 255.0).min(255.0) as u32;
+            // Clamp final color components to [0, 1] range before conversion
+            let r = (final_color.x.max(0.0).min(1.0) * 255.0) as u32;
+            let g = (final_color.y.max(0.0).min(1.0) * 255.0) as u32;
+            let b = (final_color.z.max(0.0).min(1.0) * 255.0) as u32;
             (255 << 24) | (r << 16) | (g << 8) | b
         } else {
             255 << 24
