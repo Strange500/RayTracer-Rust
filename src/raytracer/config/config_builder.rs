@@ -17,6 +17,8 @@ pub struct Config {
     pub output_file: String,
     pub camera: Camera,
     pub ambient: Vec3,
+    pub maxdepth: u32,
+    pub maxverts: u32,
     scene_objects: Vec<Shape>,
     lights: Vec<Light>,
 }
@@ -53,6 +55,31 @@ impl Config {
                         i, center, radius, diffuse_color, specular_color, shininess
                     );
                 }
+                Shape::Plane {
+                    point,
+                    normal,
+                    diffuse_color,
+                    specular_color,
+                    shininess,
+                } => {
+                    println!(
+                        " Object {}: Plane - point({:?}), normal({:?}), diffuse_color({:?}), specular_color({:?}), shininess({})",
+                        i, point, normal, diffuse_color, specular_color, shininess
+                    );
+                }
+                Shape::Triangle {
+                    v0,
+                    v1,
+                    v2,
+                    diffuse_color,
+                    specular_color,
+                    shininess,
+                } => {
+                    println!(
+                        " Object {}: Triangle - v0({:?}), v1({:?}), v2({:?}), diffuse_color({:?}), specular_color({:?}), shininess({})",
+                        i, v0, v1, v2, diffuse_color, specular_color, shininess
+                    );
+                }
             }
         }
         for (i, light) in self.lights.iter().enumerate() {
@@ -78,6 +105,7 @@ pub struct ParsedConfigState {
     diffuse_color: Vec3,
     specular_color: Vec3,
     shininess: f32,
+    vertices: Vec<Vec3>,
 }
 
 impl ParsedConfigState {
@@ -86,6 +114,7 @@ impl ParsedConfigState {
             diffuse_color: DEFAULT_DIFFUSE_COLOR,
             specular_color: DEFAULT_SPECULAR_COLOR,
             shininess: DEFAULT_SHININESS,
+            vertices: Vec::new(),
         }
     }
     pub fn load_config_file(&mut self, file_path: &str) -> Result<Config, String> {
@@ -102,6 +131,8 @@ impl ParsedConfigState {
                 fov: 60.0,
             },
             ambient: Vec3::splat(0.0),
+            maxdepth: 1,
+            maxverts: 0,
             scene_objects: Vec::new(),
             lights: Vec::new(),
         };
@@ -138,6 +169,14 @@ impl ParsedConfigState {
                 "sphere" => {
                     let sphere = self.parse_sphere(param)?;
                     config.scene_objects.push(sphere);
+                }
+                "tri" => {
+                    let triangle = self.parse_triangle(param)?;
+                    config.scene_objects.push(triangle);
+                }
+                "plane" => {
+                    let plane = self.parse_plane(param)?;
+                    config.scene_objects.push(plane);
                 }
                 "point" => {
                     let light = self.parse_point_light(param)?;
@@ -178,6 +217,20 @@ impl ParsedConfigState {
                     if self.shininess < 0.0 {
                         return Err("Shininess must be non-negative".to_string());
                     }
+                }
+                "maxdepth" => {
+                    config.maxdepth = param.parse::<u32>().map_err(|e| e.to_string())?;
+                }
+                "maxverts" => {
+                    config.maxverts = param.parse::<u32>().map_err(|e| e.to_string())?;
+                    self.vertices.reserve(config.maxverts as usize);
+                }
+                "vertex" => {
+                    let vertex = self.parse_simple_vec3(param)?;
+                    if self.vertices.len() >= config.maxverts as usize {
+                        return Err("Exceeded maximum number of vertices (maxverts)".to_string());
+                    }
+                    self.vertices.push(vertex);
                 }
                 _ => {
                     return Err(format!("Unknown configuration key: {}", parts[0]));
@@ -338,6 +391,58 @@ impl ParsedConfigState {
         Ok(Shape::Sphere {
             center,
             radius,
+            diffuse_color: self.diffuse_color,
+            specular_color: self.specular_color,
+            shininess: self.shininess,
+        })
+    }
+
+    fn parse_triangle(&self, value: &str) -> Result<Shape, String> {
+        let params: Vec<&str> = value.split(' ').collect();
+        if params.len() != 3 {
+            return Err("Invalid triangle format".to_string());
+        }
+        let v0_index = params[0].parse::<usize>().map_err(|e| e.to_string())?;
+        let v1_index = params[1].parse::<usize>().map_err(|e| e.to_string())?;
+        let v2_index = params[2].parse::<usize>().map_err(|e| e.to_string())?;
+
+        if v0_index >= self.vertices.len()
+            || v1_index >= self.vertices.len()
+            || v2_index >= self.vertices.len()
+        {
+            return Err("Triangle vertex index out of bounds".to_string());
+        }
+
+        Ok(Shape::Triangle {
+            v0: self.vertices[v0_index],
+            v1: self.vertices[v1_index],
+            v2: self.vertices[v2_index],
+            diffuse_color: self.diffuse_color,
+            specular_color: self.specular_color,
+            shininess: self.shininess,
+        })
+    }
+
+    fn parse_plane(&self, value: &str) -> Result<Shape, String> {
+        let params: Vec<&str> = value.split(' ').collect();
+        if params.len() != 6 {
+            return Err("Invalid plane format".to_string());
+        }
+        let point = Vec3::new(
+            params[0].parse::<f32>().map_err(|e| e.to_string())?,
+            params[1].parse::<f32>().map_err(|e| e.to_string())?,
+            params[2].parse::<f32>().map_err(|e| e.to_string())?,
+        );
+        let normal = Vec3::new(
+            params[3].parse::<f32>().map_err(|e| e.to_string())?,
+            params[4].parse::<f32>().map_err(|e| e.to_string())?,
+            params[5].parse::<f32>().map_err(|e| e.to_string())?,
+        )
+        .normalize();
+
+        Ok(Shape::Plane {
+            point,
+            normal,
             diffuse_color: self.diffuse_color,
             specular_color: self.specular_color,
             shininess: self.shininess,

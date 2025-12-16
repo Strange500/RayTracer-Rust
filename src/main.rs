@@ -7,8 +7,10 @@ use raytracer::ParsedConfigState;
 
 fn main() {
     let mut parsed_config = ParsedConfigState::new();
-    let config = parsed_config.load_config_file("test.scene").expect("Failed to load configuration");
+    let config = parsed_config.load_config_file("final_avec_bonus.scene").expect("Failed to load configuration");
+    println!("Configuration loaded successfully.");
     let ray_tracer = raytracer::RayTracer::new(config);
+    println!("Starting rendering...");
     let image = ray_tracer.render();
     match image {
         Ok(img) => {
