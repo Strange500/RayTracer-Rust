@@ -126,7 +126,17 @@ pub fn render(&self) -> Result<Image, String> {
                     let view_dir = -direction;
                     let half_vector = (light_dir + view_dir).normalize();
                     let n_dot_h = intersection.normal.dot(half_vector).max(0.0);
-                    let specular = intersection.specular_color * n_dot_h.powf(intersection.shininess);
+                    
+                    // Handle shininess as per Java implementation
+                    let specular_factor = if intersection.shininess == 1.0 {
+                        n_dot_h
+                    } else if intersection.shininess == 0.0 {
+                        if n_dot_l > 0.0 { n_dot_h } else { 0.0 }
+                    } else {
+                        if n_dot_l > 0.0 { n_dot_h.powf(intersection.shininess) } else { 0.0 }
+                    };
+                    
+                    let specular = intersection.specular_color * specular_factor;
                     light_accumulator += (diffuse + specular) * light_color;
                 }
             }
