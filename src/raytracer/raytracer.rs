@@ -70,6 +70,10 @@ pub fn render(&self) -> Result<Image, String> {
     }
 
     fn find_color(&self, origin: glam::Vec3, direction: glam::Vec3) -> u32 {
+        self.find_color_recursive(origin, direction, 0)
+    }
+
+    fn find_color_recursive(&self, origin: glam::Vec3, direction: glam::Vec3, depth: u32) -> u32 {
         let ray: Ray = Ray { origin, direction };
         let ambient = self.config.ambient;
         let closest_intersection = self
@@ -118,12 +122,35 @@ pub fn render(&self) -> Result<Image, String> {
                 let light_color = light.color();
                 let n_dot_l = intersection.normal.dot(light_dir).max(0.0);
                 let diffuse = intersection.diffuse_color * n_dot_l;
-                let view_dir = (self.config.camera.position - intersection.point).normalize();
+                let view_dir = (origin - intersection.point).normalize();
                 let half_vector = (light_dir + view_dir).normalize();
                 let n_dot_h = intersection.normal.dot(half_vector).max(0.0);
                 let specular = intersection.specular_color * n_dot_h.powf(intersection.shininess);
                 final_color += (diffuse + specular) * light_color;
             }
+            
+            // Add indirect lighting (reflections) if we haven't exceeded max depth
+            if depth < self.config.maxdepth {
+                // Calculate reflection direction: R = D - 2(D·N)N
+                let reflect_dir = direction - 2.0 * direction.dot(intersection.normal) * intersection.normal;
+                let reflect_dir = reflect_dir.normalize();
+                
+                // Cast reflection ray with small offset to avoid self-intersection
+                let reflect_origin = intersection.point + intersection.normal * 1e-4;
+                
+                // Recursively trace the reflection ray
+                let reflected_color_u32 = self.find_color_recursive(reflect_origin, reflect_dir, depth + 1);
+                
+                // Convert u32 color back to Vec3
+                let r = ((reflected_color_u32 >> 16) & 0xFF) as f32 / 255.0;
+                let g = ((reflected_color_u32 >> 8) & 0xFF) as f32 / 255.0;
+                let b = (reflected_color_u32 & 0xFF) as f32 / 255.0;
+                let reflected_color = glam::Vec3::new(r, g, b);
+                
+                // Add reflection contribution weighted by specular color
+                final_color += reflected_color * intersection.specular_color;
+            }
+            
             let r = (final_color.x * 255.0).min(255.0) as u32;
             let g = (final_color.y * 255.0).min(255.0) as u32;
             let b = (final_color.z * 255.0).min(255.0) as u32;
