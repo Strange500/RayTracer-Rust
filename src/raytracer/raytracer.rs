@@ -99,11 +99,17 @@ pub fn render(&self) -> Result<Image, String> {
                     .get_scene_objects()
                     .iter()
                     .filter_map(|object| object.intersect(&shadow_ray))
-                    .any(|shadow_intersection| match light {
-                        Point { position, .. } => {
-                            shadow_intersection.distance < (*position - intersection.point).length()
+                    .any(|shadow_intersection| {
+                        // Ignore intersections very close to the origin (epsilon check)
+                        if shadow_intersection.distance < 1e-4 {
+                            return false;
                         }
-                        Directional { .. } => true,
+                        match light {
+                            Point { position, .. } => {
+                                shadow_intersection.distance < (*position - intersection.point).length()
+                            }
+                            Directional { .. } => true,
+                        }
                     });
                 if in_shadow {
                     continue;
