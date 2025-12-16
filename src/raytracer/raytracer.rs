@@ -122,7 +122,8 @@ pub fn render(&self) -> Result<Image, String> {
                 let light_color = light.color();
                 let n_dot_l = intersection.normal.dot(light_dir).max(0.0);
                 let diffuse = intersection.diffuse_color * n_dot_l;
-                let view_dir = (origin - intersection.point).normalize();
+                // View direction is opposite of ray direction (toward the viewer)
+                let view_dir = -direction;
                 let half_vector = (light_dir + view_dir).normalize();
                 let n_dot_h = intersection.normal.dot(half_vector).max(0.0);
                 let specular = intersection.specular_color * n_dot_h.powf(intersection.shininess);
