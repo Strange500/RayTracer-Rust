@@ -104,6 +104,10 @@ pub fn render(&self) -> Result<Image, String> {
                         if shadow_intersection.distance < 1e-4 {
                             return false;
                         }
+                        // Ignore back face hits for triangles (they shouldn't block light)
+                        if shadow_intersection.is_back_face {
+                            return false;
+                        }
                         match light {
                             Point { position, .. } => {
                                 shadow_intersection.distance < (*position - intersection.point).length()

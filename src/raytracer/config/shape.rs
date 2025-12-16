@@ -39,6 +39,7 @@ pub struct Intersection {
     pub diffuse_color: Vec3,
     pub specular_color: Vec3,
     pub shininess: f32,
+    pub is_back_face: bool,  // True if ray hit the back face of a surface
 }
 
 impl Shape {
@@ -91,6 +92,7 @@ fn intersect_sphere(ray: &Ray, sphere: &Shape) -> Option<Intersection> {
             diffuse_color: *diffuse_color,
             specular_color: *specular_color,
             shininess: *shininess,
+            is_back_face: false,  // Spheres don't have back faces in our model
         })
     }
 }
@@ -127,6 +129,7 @@ fn intersect_plane(ray: &Ray, plane: &Shape) -> Option<Intersection> {
         diffuse_color: *diffuse_color,
         specular_color: *specular_color,
         shininess: *shininess,
+        is_back_face: false,  // Planes are double-sided in our model
     })
 }
 
@@ -175,6 +178,9 @@ fn intersect_triangle(ray: &Ray, triangle: &Shape) -> Option<Intersection> {
 
     let intersection_point = ray.origin + ray.direction * t;
     let normal = edge1.cross(edge2).normalize();
+    
+    // Check if we're hitting the back face of the triangle
+    let is_back_face = normal.dot(ray.direction) > 0.0;
 
     Some(Intersection {
         distance: t,
@@ -183,5 +189,6 @@ fn intersect_triangle(ray: &Ray, triangle: &Shape) -> Option<Intersection> {
         diffuse_color: *diffuse_color,
         specular_color: *specular_color,
         shininess: *shininess,
+        is_back_face,
     })
 }
