@@ -102,7 +102,7 @@ pub fn render(&self) -> Result<Image, String> {
                     Directional { direction, .. } => *direction,
                 };
                 let shadow_ray = Ray {
-                    origin: intersection.point + intersection.normal * 1e-4,
+                    origin: intersection.point + intersection.normal * 1e-6,
                     direction: light_dir,
                 };
                 let in_shadow = self
@@ -112,7 +112,7 @@ pub fn render(&self) -> Result<Image, String> {
                     .filter_map(|object| object.intersect(&shadow_ray))
                     .any(|shadow_intersection| {
                         // Ignore intersections very close to the origin (epsilon check)
-                        if shadow_intersection.distance < 1e-4 {
+                        if shadow_intersection.distance < 1e-6 {
                             return false;
                         }
                         match light {
@@ -162,7 +162,7 @@ pub fn render(&self) -> Result<Image, String> {
                 let reflect_dir = reflect_dir.normalize();
                 
                 // Cast reflection ray with offset along normal to avoid self-intersection
-                let reflect_origin = intersection.point + intersection.normal * 1e-4;
+                let reflect_origin = intersection.point + intersection.normal * 1e-6;
                 
                 // Recursively trace the reflection ray - now returns Vec3 directly
                 let reflected_color = self.find_color_recursive(reflect_origin, reflect_dir, depth + 1);
