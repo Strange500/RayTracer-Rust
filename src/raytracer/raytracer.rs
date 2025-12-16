@@ -92,10 +92,10 @@ pub fn render(&self) -> Result<Image, String> {
                 // shadow ray
                 let light_dir = match light {
                     Point { position, .. } => (*position - intersection.point).normalize(),
-                    Directional { direction, .. } => (-*direction).normalize(),
+                    Directional { direction, .. } => *direction,
                 };
                 let shadow_ray = Ray {
-                    origin: intersection.point + intersection.normal * 1e-4,
+                    origin: intersection.point + intersection.normal * 0.001,
                     direction: light_dir,
                 };
                 let in_shadow = self
@@ -138,7 +138,7 @@ pub fn render(&self) -> Result<Image, String> {
                 let reflect_dir = reflect_dir.normalize();
                 
                 // Cast reflection ray with small offset to avoid self-intersection
-                let reflect_origin = intersection.point + intersection.normal * 1e-4;
+                let reflect_origin = intersection.point + intersection.normal * 0.001;
                 
                 // Recursively trace the reflection ray
                 let reflected_color_u32 = self.find_color_recursive(reflect_origin, reflect_dir, depth + 1);
