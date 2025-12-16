@@ -70,10 +70,15 @@ pub fn render(&self) -> Result<Image, String> {
     }
 
     fn find_color(&self, origin: glam::Vec3, direction: glam::Vec3) -> u32 {
-        self.find_color_recursive(origin, direction, 0)
+        let color_vec = self.find_color_recursive(origin, direction, 0);
+        // Convert final Vec3 color to u32
+        let r = (color_vec.x.max(0.0).min(1.0) * 255.0) as u32;
+        let g = (color_vec.y.max(0.0).min(1.0) * 255.0) as u32;
+        let b = (color_vec.z.max(0.0).min(1.0) * 255.0) as u32;
+        (255 << 24) | (r << 16) | (g << 8) | b
     }
 
-    fn find_color_recursive(&self, origin: glam::Vec3, direction: glam::Vec3, depth: u32) -> u32 {
+    fn find_color_recursive(&self, origin: glam::Vec3, direction: glam::Vec3, depth: u32) -> glam::Vec3 {
         let ray: Ray = Ray { origin, direction };
         let closest_intersection = self
             .config
@@ -159,27 +164,18 @@ pub fn render(&self) -> Result<Image, String> {
                 // Cast reflection ray with offset along normal to avoid self-intersection
                 let reflect_origin = intersection.point + intersection.normal * 0.001;
                 
-                // Recursively trace the reflection ray
-                let reflected_color_u32 = self.find_color_recursive(reflect_origin, reflect_dir, depth + 1);
-                
-                // Convert u32 color back to Vec3
-                let r = ((reflected_color_u32 >> 16) & 0xFF) as f32 / 255.0;
-                let g = ((reflected_color_u32 >> 8) & 0xFF) as f32 / 255.0;
-                let b = (reflected_color_u32 & 0xFF) as f32 / 255.0;
-                let reflected_color = glam::Vec3::new(r, g, b);
+                // Recursively trace the reflection ray - now returns Vec3 directly
+                let reflected_color = self.find_color_recursive(reflect_origin, reflect_dir, depth + 1);
                 
                 // Add reflection contribution: specular * reflected_color
+                // Note: This formula matches the Java implementation
                 let reflection_contribution = intersection.specular_color * reflected_color;
                 final_color += reflection_contribution;
             }
             
-            // Clamp final color components to [0, 1] range before conversion
-            let r = (final_color.x.max(0.0).min(1.0) * 255.0) as u32;
-            let g = (final_color.y.max(0.0).min(1.0) * 255.0) as u32;
-            let b = (final_color.z.max(0.0).min(1.0) * 255.0) as u32;
-            (255 << 24) | (r << 16) | (g << 8) | b
+            final_color
         } else {
-            255 << 24
+            glam::Vec3::ZERO
         }
     }
 }
