@@ -75,7 +75,6 @@ pub fn render(&self) -> Result<Image, String> {
 
     fn find_color_recursive(&self, origin: glam::Vec3, direction: glam::Vec3, depth: u32) -> u32 {
         let ray: Ray = Ray { origin, direction };
-        let ambient = self.config.ambient;
         let closest_intersection = self
             .config
             .get_scene_objects()
@@ -86,8 +85,11 @@ pub fn render(&self) -> Result<Image, String> {
                     .partial_cmp(&b.distance)
                     .unwrap_or(std::cmp::Ordering::Equal)
             });
+            
         if let Some(intersection) = closest_intersection {
-            let mut final_color = ambient;
+            // Accumulate light contributions from all light sources
+            let mut light_accumulator = glam::Vec3::ZERO;
+            
             for light in self.config.get_lights() {
                 // shadow ray
                 let light_dir = match light {
@@ -115,29 +117,36 @@ pub fn render(&self) -> Result<Image, String> {
                             Directional { .. } => true,
                         }
                     });
-                if in_shadow {
-                    continue;
+                if !in_shadow {
+                    // blinn-phong shading
+                    let light_color = light.color();
+                    let n_dot_l = intersection.normal.dot(light_dir).max(0.0);
+                    let diffuse = intersection.diffuse_color * n_dot_l;
+                    // View direction is opposite of ray direction (toward the viewer)
+                    let view_dir = -direction;
+                    let half_vector = (light_dir + view_dir).normalize();
+                    let n_dot_h = intersection.normal.dot(half_vector).max(0.0);
+                    let specular = intersection.specular_color * n_dot_h.powf(intersection.shininess);
+                    light_accumulator += (diffuse + specular) * light_color;
                 }
-                // blinn-phong shading
-                let light_color = light.color();
-                let n_dot_l = intersection.normal.dot(light_dir).max(0.0);
-                let diffuse = intersection.diffuse_color * n_dot_l;
-                // View direction is opposite of ray direction (toward the viewer)
-                let view_dir = -direction;
-                let half_vector = (light_dir + view_dir).normalize();
-                let n_dot_h = intersection.normal.dot(half_vector).max(0.0);
-                let specular = intersection.specular_color * n_dot_h.powf(intersection.shininess);
-                final_color += (diffuse + specular) * light_color;
             }
             
-            // Add indirect lighting (reflections) if we haven't exceeded max depth
+            // Add ambient lighting to the direct lighting
+            let mut final_color = light_accumulator + self.config.ambient;
+            
+            // Check if the surface is reflective (has non-zero specular component)
+            let is_reflective = intersection.specular_color.x > 0.0 
+                || intersection.specular_color.y > 0.0 
+                || intersection.specular_color.z > 0.0;
+            
+            // Add indirect lighting (reflections) if reflective and within depth limit
             // maxdepth=1 means no reflections, maxdepth=2 means one bounce, etc.
-            if self.config.maxdepth > 1 && depth + 1 < self.config.maxdepth {
+            if is_reflective && self.config.maxdepth > 1 && depth + 1 < self.config.maxdepth {
                 // Calculate reflection direction: R = D - 2(D·N)N
                 let reflect_dir = direction - 2.0 * direction.dot(intersection.normal) * intersection.normal;
                 let reflect_dir = reflect_dir.normalize();
                 
-                // Cast reflection ray with small offset to avoid self-intersection
+                // Cast reflection ray with offset along normal to avoid self-intersection
                 let reflect_origin = intersection.point + intersection.normal * 0.001;
                 
                 // Recursively trace the reflection ray
@@ -149,8 +158,9 @@ pub fn render(&self) -> Result<Image, String> {
                 let b = (reflected_color_u32 & 0xFF) as f32 / 255.0;
                 let reflected_color = glam::Vec3::new(r, g, b);
                 
-                // Add reflection contribution weighted by specular color
-                final_color += reflected_color * intersection.specular_color;
+                // Add reflection contribution: specular * reflected_color
+                let reflection_contribution = intersection.specular_color * reflected_color;
+                final_color += reflection_contribution;
             }
             
             // Clamp final color components to [0, 1] range before conversion
