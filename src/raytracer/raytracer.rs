@@ -130,7 +130,8 @@ pub fn render(&self) -> Result<Image, String> {
             }
             
             // Add indirect lighting (reflections) if we haven't exceeded max depth
-            if depth < self.config.maxdepth {
+            // maxdepth=1 means no reflections, maxdepth=2 means one bounce, etc.
+            if self.config.maxdepth > 1 && depth + 1 < self.config.maxdepth {
                 // Calculate reflection direction: R = D - 2(D·N)N
                 let reflect_dir = direction - 2.0 * direction.dot(intersection.normal) * intersection.normal;
                 let reflect_dir = reflect_dir.normalize();
