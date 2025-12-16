@@ -102,7 +102,7 @@ pub fn render(&self) -> Result<Image, String> {
                     Directional { direction, .. } => *direction,
                 };
                 let shadow_ray = Ray {
-                    origin: intersection.point + intersection.normal * 0.001,
+                    origin: intersection.point + intersection.normal * 1e-4,
                     direction: light_dir,
                 };
                 let in_shadow = self
