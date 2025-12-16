@@ -199,6 +199,53 @@ mod tests {
         test_file("test_file/jalon5/tp55");
     }
 
+    #[test]
+    fn test_raytracer_tp61directional() {
+        test_file("test_file/jalon6/tp61-dir");
+    }
+
+    #[test]
+    fn test_raytracer_tp61() {
+        test_file("test_file/jalon6/tp61");
+    }
+
+    #[test]
+    fn test_raytracer_tp62_1() {
+        test_file("test_file/jalon6/tp62-1");
+    }
+
+    #[test]
+    fn test_raytracer_tp62_2() {
+        test_file("test_file/jalon6/tp62-2");
+    }
+
+    #[test]
+    fn test_raytracer_tp62_3() {
+        test_file("test_file/jalon6/tp62-3");
+    }
+
+    #[test]
+    fn test_raytracer_tp62_4() {
+        test_file("test_file/jalon6/tp62-4");
+    }
+
+    #[test]
+    fn test_raytracer_tp62_5() {
+        test_file("test_file/jalon6/tp62-5");
+    }
+
+    #[test]
+    fn test_raytracer_tp63() {
+        test_file("test_file/jalon6/tp63");
+    }
+
+    #[test]
+    fn test_raytracer_tp64() {
+        test_file("test_file/jalon6/tp64");
+    }
+
+
+
     fn test_file(path: &str) {
         let scene_file = format!("{path}.test");
         let expected_image_file = format!("{path}.png");
