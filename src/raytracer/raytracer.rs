@@ -162,7 +162,7 @@ pub fn render(&self) -> Result<Image, String> {
                 let reflect_dir = reflect_dir.normalize();
                 
                 // Cast reflection ray with offset along normal to avoid self-intersection
-                let reflect_origin = intersection.point + intersection.normal * 0.001;
+                let reflect_origin = intersection.point + intersection.normal * 1e-4;
                 
                 // Recursively trace the reflection ray - now returns Vec3 directly
                 let reflected_color = self.find_color_recursive(reflect_origin, reflect_dir, depth + 1);
