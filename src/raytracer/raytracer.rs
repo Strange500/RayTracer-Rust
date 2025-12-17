@@ -158,8 +158,8 @@ pub fn render(&self) -> Result<Image, String> {
             // maxdepth=1 means no reflections, maxdepth=2 means one bounce, etc.
             if is_reflective && self.config.maxdepth > 1 && depth + 1 < self.config.maxdepth {
                 // Calculate reflection direction: R = D - 2(D·N)N
+                // Note: D and N are already normalized, so R is also normalized
                 let reflect_dir = direction - 2.0 * direction.dot(intersection.normal) * intersection.normal;
-                let reflect_dir = reflect_dir.normalize();
                 
                 // Cast reflection ray with offset along normal to avoid self-intersection
                 let reflect_origin = intersection.point + intersection.normal * 1e-6;
