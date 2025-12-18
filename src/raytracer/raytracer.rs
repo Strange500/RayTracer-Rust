@@ -71,7 +71,6 @@ pub fn render(&self) -> Result<Image, String> {
 
     fn find_color(&self, origin: glam::Vec3, direction: glam::Vec3) -> u32 {
         let color_vec = self.find_color_recursive(origin, direction, 0);
-        // Convert final Vec3 color to u32 - use rounding like Java implementation
         let r = (color_vec.x.max(0.0).min(1.0) * 255.0).round() as u32;
         let g = (color_vec.y.max(0.0).min(1.0) * 255.0).round() as u32;
         let b = (color_vec.z.max(0.0).min(1.0) * 255.0).round() as u32;
@@ -79,7 +78,6 @@ pub fn render(&self) -> Result<Image, String> {
     }
 
     fn find_color_recursive(&self, origin: glam::Vec3, direction: glam::Vec3, depth: u32) -> glam::Vec3 {
-        // Check if we've exceeded the maximum recursion depth
         if depth > self.config.maxdepth {
             return glam::Vec3::ZERO;
         }
@@ -160,7 +158,6 @@ pub fn render(&self) -> Result<Image, String> {
                 || intersection.specular_color.z > 0.0;
             
             // Add indirect lighting (reflections) if reflective and within depth limit
-            // Match Java implementation: allow reflections when depth + 1 < maxdepth
             if is_reflective && depth + 1 < self.config.maxdepth {
                 // Calculate reflection direction: R = D - 2(D·N)N
                 // Note: D and N are already normalized, so R is also normalized
