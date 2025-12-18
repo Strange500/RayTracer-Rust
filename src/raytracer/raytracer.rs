@@ -71,14 +71,17 @@ pub fn render(&self) -> Result<Image, String> {
 
     fn find_color(&self, origin: glam::Vec3, direction: glam::Vec3) -> u32 {
         let color_vec = self.find_color_recursive(origin, direction, 0);
-        // Convert final Vec3 color to u32
-        let r = (color_vec.x.max(0.0).min(1.0) * 255.0) as u32;
-        let g = (color_vec.y.max(0.0).min(1.0) * 255.0) as u32;
-        let b = (color_vec.z.max(0.0).min(1.0) * 255.0) as u32;
+        let r = (color_vec.x.max(0.0).min(1.0) * 255.0).round() as u32;
+        let g = (color_vec.y.max(0.0).min(1.0) * 255.0).round() as u32;
+        let b = (color_vec.z.max(0.0).min(1.0) * 255.0).round() as u32;
         (255 << 24) | (r << 16) | (g << 8) | b
     }
 
     fn find_color_recursive(&self, origin: glam::Vec3, direction: glam::Vec3, depth: u32) -> glam::Vec3 {
+        if depth > self.config.maxdepth {
+            return glam::Vec3::ZERO;
+        }
+        
         let ray: Ray = Ray { origin, direction };
         let closest_intersection = self
             .config
@@ -155,8 +158,7 @@ pub fn render(&self) -> Result<Image, String> {
                 || intersection.specular_color.z > 0.0;
             
             // Add indirect lighting (reflections) if reflective and within depth limit
-            // maxdepth=1 means no reflections, maxdepth=2 means one bounce, etc.
-            if is_reflective && self.config.maxdepth > 1 && depth + 1 < self.config.maxdepth {
+            if is_reflective && depth + 1 < self.config.maxdepth {
                 // Calculate reflection direction: R = D - 2(D·N)N
                 // Note: D and N are already normalized, so R is also normalized
                 let reflect_dir = direction - 2.0 * direction.dot(intersection.normal) * intersection.normal;
