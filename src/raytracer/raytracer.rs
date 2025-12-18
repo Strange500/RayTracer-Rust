@@ -118,12 +118,12 @@ pub fn render(&self) -> Result<Image, String> {
                         if shadow_intersection.distance < 1e-6 {
                             return false;
                         }
+                        // If we're shading a back face, ignore back-face shadow hits
+                        if intersection.is_back_face && shadow_intersection.is_back_face {
+                            return false;
+                        }
                         match light {
                             Point { position, .. } => {
-                                // For point lights, ignore back-face hits
-                                if shadow_intersection.is_back_face {
-                                    return false;
-                                }
                                 shadow_intersection.distance < (*position - intersection.point).length()
                             }
                             Directional { .. } => true,
