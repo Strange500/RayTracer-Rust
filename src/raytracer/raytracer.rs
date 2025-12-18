@@ -63,7 +63,7 @@ pub fn render(&self) -> Result<Image, String> {
         let r = (color_vec.x.max(0.0).min(1.0) * 255.0).round() as u32;
         let g = (color_vec.y.max(0.0).min(1.0) * 255.0).round() as u32;
         let b = (color_vec.z.max(0.0).min(1.0) * 255.0).round() as u32;
-        (255 << 24) | (r << 16) | (g << 8) | b
+        (r << 16) | (g << 8) | b
     }
 
     fn find_color_recursive(&self, origin: glam::Vec3, direction: glam::Vec3, depth: u32) -> glam::Vec3 {
