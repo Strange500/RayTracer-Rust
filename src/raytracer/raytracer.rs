@@ -120,6 +120,10 @@ pub fn render(&self) -> Result<Image, String> {
                         }
                         match light {
                             Point { position, .. } => {
+                                // For point lights, ignore back-face hits
+                                if shadow_intersection.is_back_face {
+                                    return false;
+                                }
                                 shadow_intersection.distance < (*position - intersection.point).length()
                             }
                             Directional { .. } => true,
