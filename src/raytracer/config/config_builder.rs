@@ -9,7 +9,7 @@ use std::io::{self, BufRead};
 const COMMENT_CHAR: char = '#';
 const DEFAULT_DIFFUSE_COLOR: Vec3 = Vec3::ZERO;
 const DEFAULT_SPECULAR_COLOR: Vec3 = Vec3::ZERO;
-const DEFAULT_SHININESS: f32 = 10.0;
+const DEFAULT_SHININESS: f32 = 0.0;
 
 pub struct Config {
     pub width: u32,

@@ -3,7 +3,6 @@ mod imgcomparator;
 mod raytracer;
 
 use raytracer::ParsedConfigState;
-// Assuming Config looks like: struct Config { width: u32, ... }
 
 fn main() {
     let mut parsed_config = ParsedConfigState::new();
@@ -11,7 +10,10 @@ fn main() {
     println!("Configuration loaded successfully.");
     let ray_tracer = raytracer::RayTracer::new(config);
     println!("Starting rendering...");
+    let start_time = std::time::Instant::now();
     let image = ray_tracer.render();
+    let duration = start_time.elapsed();
+    println!("Rendering completed in: {:?}", duration);
     match image {
         Ok(img) => {
             imgcomparator::save_image(&img, ray_tracer.get_output_path())
