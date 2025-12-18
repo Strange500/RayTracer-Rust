@@ -430,3 +430,30 @@ impl GPURenderer {
         Err("GPU support not compiled".to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(feature = "gpu")]
+    fn test_gpu_renderer_compiles() {
+        // This test just ensures the GPU renderer code compiles correctly.
+        // We can't actually run GPU code in CI without a GPU, so we just
+        // check that the types and functions exist.
+        
+        // Try to create a GPU renderer - it may fail if no GPU is available,
+        // but that's okay for this test
+        let _ = GPURenderer::new();
+    }
+
+    #[test]
+    #[cfg(not(feature = "gpu"))]
+    fn test_gpu_renderer_stub_fails_correctly() {
+        // When GPU feature is disabled, renderer should return an error
+        let result = GPURenderer::new();
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.contains("GPU support not compiled"));
+    }
+}

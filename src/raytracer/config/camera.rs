@@ -1,5 +1,6 @@
 use nalgebra::Vector3;
 
+#[derive(Clone)]
 pub struct Camera {
     pub(crate) position: Vector3<f32>,
     pub(crate) look_at: Vector3<f32>,

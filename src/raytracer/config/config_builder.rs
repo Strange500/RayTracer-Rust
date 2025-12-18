@@ -11,6 +11,7 @@ const DEFAULT_DIFFUSE_COLOR: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
 const DEFAULT_SPECULAR_COLOR: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
 const DEFAULT_SHININESS: f32 = 0.0;
 
+#[derive(Clone)]
 pub struct Config {
     pub width: u32,
     pub height: u32,
