@@ -44,8 +44,8 @@ pub fn render(&self) -> Result<Image, String> {
     let mut image_data = vec![0u32; width * height];
 
     let camera_vector = self.config.camera.direction().normalize();
-    let normal_to_plane = camera_vector.cross(self.config.camera.up).normalize();
-    let v = normal_to_plane.cross(camera_vector).normalize();
+    let normal_to_plane = camera_vector.cross(&self.config.camera.up).normalize();
+    let v = normal_to_plane.cross(&camera_vector).normalize();
     
     let fovrad = self.config.camera.fov * std::f32::consts::PI / 180.0;
     let pixel_height = (fovrad / 2.0).tan();
@@ -82,7 +82,7 @@ pub fn render(&self) -> Result<Image, String> {
         &self.config.output_file
     }
 
-    fn find_color(&self, origin: glam::Vec3, direction: glam::Vec3) -> u32 {
+    fn find_color(&self, origin: Vector3<f32>, direction: Vector3<f32>) -> u32 {
         let color_vec = self.find_color_recursive(origin, direction, 0);
         let r = (color_vec.x.max(0.0).min(1.0) * 255.0).round() as u32;
         let g = (color_vec.y.max(0.0).min(1.0) * 255.0).round() as u32;
@@ -90,19 +90,15 @@ pub fn render(&self) -> Result<Image, String> {
         (255 << 24) | (r << 16) | (g << 8) | b
     }
 
-    /// Helper function to convert glam Vec3 ray to nalgebra ray for BVH traversal.
-    /// 
-    /// The BVH library uses nalgebra for its math types, while this project uses glam.
-    /// This conversion is a lightweight operation (just copying 6 floats).
-    fn glam_to_nalgebra_ray(origin: glam::Vec3, direction: glam::Vec3) -> bvh::ray::Ray<f32, 3> {
-        let origin_na = Point3::new(origin.x, origin.y, origin.z);
-        let direction_na = Vector3::new(direction.x, direction.y, direction.z);
-        bvh::ray::Ray::new(origin_na, direction_na)
+    /// Helper function to create a BVH ray from Vector3 origin and direction.
+    fn create_bvh_ray(origin: Vector3<f32>, direction: Vector3<f32>) -> bvh::ray::Ray<f32, 3> {
+        let origin_point = Point3::from(origin);
+        bvh::ray::Ray::new(origin_point, direction)
     }
 
-    fn find_color_recursive(&self, origin: glam::Vec3, direction: glam::Vec3, depth: u32) -> glam::Vec3 {
+    fn find_color_recursive(&self, origin: Vector3<f32>, direction: Vector3<f32>, depth: u32) -> Vector3<f32> {
         if depth > self.config.maxdepth {
-            return glam::Vec3::ZERO;
+            return Vector3::zeros();
         }
         
         let ray: Ray = Ray { origin, direction };
@@ -110,7 +106,7 @@ pub fn render(&self) -> Result<Image, String> {
         // Use BVH to get candidate objects that the ray might intersect.
         // This is the key optimization: instead of testing all objects, the BVH
         // quickly identifies only the objects whose bounding boxes intersect the ray.
-        let bvh_ray = Self::glam_to_nalgebra_ray(origin, direction);
+        let bvh_ray = Self::create_bvh_ray(origin, direction);
         let candidates = self.bvh.traverse(&bvh_ray, self.config.get_scene_objects());
         
         // Find closest intersection among candidates returned by BVH
@@ -125,7 +121,7 @@ pub fn render(&self) -> Result<Image, String> {
             
         if let Some(intersection) = closest_intersection {
             // Accumulate light contributions from all light sources
-            let mut light_accumulator = glam::Vec3::ZERO;
+            let mut light_accumulator = Vector3::zeros();
             
             for light in self.config.get_lights() {
                 // shadow ray
@@ -141,7 +137,7 @@ pub fn render(&self) -> Result<Image, String> {
                 // Use BVH for shadow ray testing. This is particularly beneficial for complex
                 // scenes with many objects, as shadow rays are cast for every intersection point
                 // and every light source. BVH drastically reduces the number of intersection tests.
-                let shadow_bvh_ray = Self::glam_to_nalgebra_ray(shadow_ray.origin, shadow_ray.direction);
+                let shadow_bvh_ray = Self::create_bvh_ray(shadow_ray.origin, shadow_ray.direction);
                 let shadow_candidates = self.bvh.traverse(&shadow_bvh_ray, self.config.get_scene_objects());
                 
                 let in_shadow = shadow_candidates
@@ -156,18 +152,18 @@ pub fn render(&self) -> Result<Image, String> {
                         }
                         match light {
                             Point { position, .. } => {
-                                shadow_intersection.distance < (*position - intersection.point).length()
+                                shadow_intersection.distance < (*position - intersection.point).norm()
                             }
                             Directional { .. } => true,
                         }
                     });
                 if !in_shadow {
                     let light_color = light.color();
-                    let n_dot_l = intersection.normal.dot(light_dir).max(0.0);
+                    let n_dot_l = intersection.normal.dot(&light_dir).max(0.0);
                     let diffuse = intersection.diffuse_color * n_dot_l;
                     let view_dir = -direction;
                     let half_vector = (light_dir + view_dir).normalize();
-                    let n_dot_h = intersection.normal.dot(half_vector).max(0.0);
+                    let n_dot_h = intersection.normal.dot(&half_vector).max(0.0);
                     
                     let specular_factor = if intersection.shininess == 1.0 {
                         n_dot_h
@@ -178,7 +174,7 @@ pub fn render(&self) -> Result<Image, String> {
                     };
                     
                     let specular = intersection.specular_color * specular_factor;
-                    light_accumulator += (diffuse + specular) * light_color;
+                    light_accumulator += (diffuse + specular).component_mul(&light_color);
                 }
             }
             
@@ -189,19 +185,19 @@ pub fn render(&self) -> Result<Image, String> {
                 || intersection.specular_color.z > 0.0;
             
             if is_reflective && depth + 1 < self.config.maxdepth {
-                let reflect_dir = direction - 2.0 * direction.dot(intersection.normal) * intersection.normal;
+                let reflect_dir = direction - 2.0 * direction.dot(&intersection.normal) * intersection.normal;
                 
                 let reflect_origin = intersection.point + intersection.normal * 1e-6;
                 
                 let reflected_color = self.find_color_recursive(reflect_origin, reflect_dir, depth + 1);
                 
-                let reflection_contribution = intersection.specular_color * reflected_color;
+                let reflection_contribution = intersection.specular_color.component_mul(&reflected_color);
                 final_color += reflection_contribution;
             }
             
             final_color
         } else {
-            glam::Vec3::ZERO
+            Vector3::zeros()
         }
     }
 }

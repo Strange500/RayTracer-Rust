@@ -961,7 +961,6 @@ name = "raytracer_rust"
 version = "0.1.0"
 dependencies = [
  "bvh",
- "glam 0.30.9",
  "image",
  "nalgebra",
  "rayon",

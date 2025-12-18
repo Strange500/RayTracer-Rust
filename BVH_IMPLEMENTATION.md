@@ -21,8 +21,10 @@ When a ray traverses the scene, the BVH allows us to quickly skip large groups o
   - Supports parallel construction via Rayon
   - Provides efficient ray-AABB intersection tests
 
-- **nalgebra v0.34**: Math library used by the BVH crate
-  - Requires conversion from glam (used in this project) to nalgebra types
+- **nalgebra v0.34**: Math library used throughout the project
+  - Unified math library for both the project and BVH crate
+  - Provides Vector3<f32> for 3D vectors and Point3<f32> for points
+  - Comprehensive linear algebra operations
 
 ### Key Components
 
@@ -59,15 +61,14 @@ pub struct RayTracer {
 - Shadow rays: BVH traversal for fast occlusion testing
 - Reflection rays: BVH traversal for recursive ray tracing
 
-### Coordinate System Conversion
+### Math Library
 
-The project uses `glam` for vector math, but the BVH crate uses `nalgebra`. A lightweight conversion function bridges the two:
+The project uses **nalgebra v0.34** as the unified math library for both the ray tracer and BVH:
 
-```rust
-fn glam_to_nalgebra_ray(origin: glam::Vec3, direction: glam::Vec3) -> bvh::ray::Ray<f32, 3>
-```
-
-This conversion only copies 6 float values (origin + direction) and has negligible performance impact.
+- **Vector3<f32>**: 3D vectors for directions, colors, normals
+- **Point3<f32>**: 3D points for positions
+- All vector operations use nalgebra's API (dot products, cross products, normalization)
+- No conversion overhead between different math libraries
 
 ## Performance Benefits
 

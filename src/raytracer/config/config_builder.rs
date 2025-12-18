@@ -2,13 +2,13 @@ use crate::raytracer::config::camera::Camera;
 use crate::raytracer::config::light::Light;
 use crate::raytracer::config::shape::Shape;
 
-use glam::Vec3;
+use nalgebra::Vector3;
 use std::fs::File;
 use std::io::{self, BufRead};
 
 const COMMENT_CHAR: char = '#';
-const DEFAULT_DIFFUSE_COLOR: Vec3 = Vec3::ZERO;
-const DEFAULT_SPECULAR_COLOR: Vec3 = Vec3::ZERO;
+const DEFAULT_DIFFUSE_COLOR: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
+const DEFAULT_SPECULAR_COLOR: Vector3<f32> = Vector3::new(0.0, 0.0, 0.0);
 const DEFAULT_SHININESS: f32 = 0.0;
 
 pub struct Config {
@@ -16,7 +16,7 @@ pub struct Config {
     pub height: u32,
     pub output_file: String,
     pub camera: Camera,
-    pub ambient: Vec3,
+    pub ambient: Vector3<f32>,
     pub maxdepth: u32,
     pub maxverts: u32,
     scene_objects: Vec<Shape>,
@@ -109,10 +109,10 @@ impl Config {
 }
 
 pub struct ParsedConfigState {
-    diffuse_color: Vec3,
-    specular_color: Vec3,
+    diffuse_color: Vector3<f32>,
+    specular_color: Vector3<f32>,
     shininess: f32,
-    vertices: Vec<Vec3>,
+    vertices: Vec<Vector3<f32>>,
 }
 
 impl ParsedConfigState {
@@ -132,12 +132,12 @@ impl ParsedConfigState {
             height: 600,
             output_file: "output.png".to_string(),
             camera: Camera {
-                position: Vec3::ZERO,
-                look_at: Vec3::Z,
-                up: Vec3::Y,
+                position: Vector3::zeros(),
+                look_at: Vector3::z(),
+                up: Vector3::y(),
                 fov: 60.0,
             },
-            ambient: Vec3::splat(0.0),
+            ambient: Vector3::repeat(0.0),
             maxdepth: 1,
             maxverts: 0,
             scene_objects: Vec::new(),
@@ -266,12 +266,12 @@ impl ParsedConfigState {
         if params.len() != 6 {
             return Err("Invalid point light format".to_string());
         }
-        let position = Vec3::new(
+        let position = Vector3::new(
             params[0].parse::<f32>().map_err(|e| e.to_string())?,
             params[1].parse::<f32>().map_err(|e| e.to_string())?,
             params[2].parse::<f32>().map_err(|e| e.to_string())?,
         );
-        let color = Vec3::new(
+        let color = Vector3::new(
             params[3].parse::<f32>().map_err(|e| e.to_string())?,
             params[4].parse::<f32>().map_err(|e| e.to_string())?,
             params[5].parse::<f32>().map_err(|e| e.to_string())?,
@@ -287,12 +287,12 @@ impl ParsedConfigState {
         if params.len() != 6 {
             return Err("Invalid directional light format".to_string());
         }
-        let direction = Vec3::new(
+        let direction = Vector3::new(
             params[0].parse::<f32>().map_err(|e| e.to_string())?,
             params[1].parse::<f32>().map_err(|e| e.to_string())?,
             params[2].parse::<f32>().map_err(|e| e.to_string())?,
         );
-        let color = Vec3::new(
+        let color = Vector3::new(
             params[3].parse::<f32>().map_err(|e| e.to_string())?,
             params[4].parse::<f32>().map_err(|e| e.to_string())?,
             params[5].parse::<f32>().map_err(|e| e.to_string())?,
@@ -311,17 +311,17 @@ impl ParsedConfigState {
         if params.len() != 10 {
             return Err("Invalid camera format".to_string());
         }
-        let position = Vec3::new(
+        let position = Vector3::new(
             params[0].parse::<f32>().map_err(|e| e.to_string())?,
             params[1].parse::<f32>().map_err(|e| e.to_string())?,
             params[2].parse::<f32>().map_err(|e| e.to_string())?,
         );
-        let look_at = Vec3::new(
+        let look_at = Vector3::new(
             params[3].parse::<f32>().map_err(|e| e.to_string())?,
             params[4].parse::<f32>().map_err(|e| e.to_string())?,
             params[5].parse::<f32>().map_err(|e| e.to_string())?,
         );
-        let up = Vec3::new(
+        let up = Vector3::new(
             params[6].parse::<f32>().map_err(|e| e.to_string())?,
             params[7].parse::<f32>().map_err(|e| e.to_string())?,
             params[8].parse::<f32>().map_err(|e| e.to_string())?,
@@ -340,7 +340,7 @@ impl ParsedConfigState {
         })
     }
 
-    fn parse_ambient(&self, value: &str) -> Result<Vec3, String> {
+    fn parse_ambient(&self, value: &str) -> Result<Vector3<f32>, String> {
         let comps: Vec<&str> = value.split(' ').collect();
         if comps.len() != 3 {
             return Err("Invalid ambient light format".to_string());
@@ -351,18 +351,18 @@ impl ParsedConfigState {
 
         ParsedConfigState::check_rgb_values(r, g, b)?;
 
-        Ok(Vec3::new(r, g, b))
+        Ok(Vector3::new(r, g, b))
     }
 
-    fn parse_simple_vec3(&self, value: &str) -> Result<Vec3, String> {
+    fn parse_simple_vec3(&self, value: &str) -> Result<Vector3<f32>, String> {
         let comps: Vec<&str> = value.split(' ').collect();
         if comps.len() != 3 {
-            return Err("Invalid Vec3 format".to_string());
+            return Err("Invalid Vector3 format".to_string());
         }
         let x: f32 = comps[0].parse::<f32>().map_err(|e| e.to_string())?;
         let y = comps[1].parse::<f32>().map_err(|e| e.to_string())?;
         let z = comps[2].parse::<f32>().map_err(|e| e.to_string())?;
-        Ok(Vec3::new(x, y, z))
+        Ok(Vector3::new(x, y, z))
     }
 
     fn parse_output(&self, value: &str) -> Result<String, String> {
@@ -386,7 +386,7 @@ impl ParsedConfigState {
         if params.len() != 4 {
             return Err("Invalid sphere format".to_string());
         }
-        let center = Vec3::new(
+        let center = Vector3::new(
             params[0].parse::<f32>().map_err(|e| e.to_string())?,
             params[1].parse::<f32>().map_err(|e| e.to_string())?,
             params[2].parse::<f32>().map_err(|e| e.to_string())?,
@@ -437,12 +437,12 @@ impl ParsedConfigState {
         if params.len() != 6 {
             return Err("Invalid plane format".to_string());
         }
-        let point = Vec3::new(
+        let point = Vector3::new(
             params[0].parse::<f32>().map_err(|e| e.to_string())?,
             params[1].parse::<f32>().map_err(|e| e.to_string())?,
             params[2].parse::<f32>().map_err(|e| e.to_string())?,
         );
-        let normal = Vec3::new(
+        let normal = Vector3::new(
             params[3].parse::<f32>().map_err(|e| e.to_string())?,
             params[4].parse::<f32>().map_err(|e| e.to_string())?,
             params[5].parse::<f32>().map_err(|e| e.to_string())?,
@@ -478,9 +478,9 @@ mod tests {
         let camera = parsed_config
             .parse_camera("0.0 0.0 150.0 0.0 0.0 5.0 0.0 1.0 0.0 60")
             .unwrap();
-        assert_eq!(camera.position, Vec3::new(0.0, 0.0, 150.0));
-        assert_eq!(camera.look_at, Vec3::new(0.0, 0.0, 5.0));
-        assert_eq!(camera.up, Vec3::new(0.0, 1.0, 0.0));
+        assert_eq!(camera.position, Vector3::new(0.0, 0.0, 150.0));
+        assert_eq!(camera.look_at, Vector3::new(0.0, 0.0, 5.0));
+        assert_eq!(camera.up, Vector3::new(0.0, 1.0, 0.0));
         assert_eq!(camera.fov, 60.0);
     }
 
@@ -488,7 +488,7 @@ mod tests {
     fn test_parse_ambient() {
         let parsed_config = ParsedConfigState::new();
         let ambient = parsed_config.parse_ambient("0.2 0.3 0.4").unwrap();
-        assert_eq!(ambient, Vec3::new(0.2, 0.3, 0.4));
+        assert_eq!(ambient, Vector3::new(0.2, 0.3, 0.4));
     }
 
     #[test]
