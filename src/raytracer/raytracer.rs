@@ -2,6 +2,7 @@ use crate::imgcomparator::Image;
 use crate::raytracer::config::light::Light::{Directional, Point};
 use crate::raytracer::config::Config;
 use crate::raytracer::config::Ray;
+use crate::raytracer::gpu_backend::GpuBackend;
 use rayon::prelude::*;
 
 pub struct RayTracer {
@@ -11,6 +12,11 @@ pub struct RayTracer {
 impl RayTracer {
     pub fn new(config: Config) -> Self {
         RayTracer { config }
+    }
+
+    pub fn render_gpu(&self) -> Result<Image, String> {
+        let gpu_backend = GpuBackend::new()?;
+        gpu_backend.render(&self.config)
     }
 
 pub fn render(&self) -> Result<Image, String> {

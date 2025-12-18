@@ -7,3 +7,6 @@ edition = "2021"
 glam = "0.30.9"
 image = "0.25.9"
 rayon = "1.11.0"
+wgpu = "24.0.0"
+pollster = "0.4.0"
+bytemuck = { version = "1.24.0", features = ["derive"] }
