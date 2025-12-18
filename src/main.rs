@@ -3,7 +3,6 @@ mod imgcomparator;
 mod raytracer;
 
 use raytracer::ParsedConfigState;
-// Assuming Config looks like: struct Config { width: u32, ... }
 
 fn main() {
     let mut parsed_config = ParsedConfigState::new();

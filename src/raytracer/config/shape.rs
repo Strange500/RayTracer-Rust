@@ -1,6 +1,5 @@
 use glam::Vec3;
 
-// 1. Added derive Copy and Clone so we can store the Shape in the Intersection struct easily.
 #[derive(Clone, Copy, Debug)]
 pub enum Shape {
     Sphere {
@@ -39,13 +38,12 @@ pub struct Intersection {
     pub diffuse_color: Vec3,
     pub specular_color: Vec3,
     pub shininess: f32,
-    pub is_back_face: bool,  // True if ray hit the back face of a surface
+    pub is_back_face: bool,
 }
 
 impl Shape {
     pub fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         match self {
-            // 2. Fixed syntax: Use { .. } to match a struct-variant without binding fields
             Shape::Sphere { .. } => intersect_sphere(ray, self),
             Shape::Plane { .. } => intersect_plane(ray, self),
             Shape::Triangle { .. } => intersect_triangle(ray, self),
@@ -67,9 +65,6 @@ fn intersect_sphere(ray: &Ray, sphere: &Shape) -> Option<Intersection> {
     };
 
     let oc = ray.origin - *center;
-    // Performance: Assume ray.direction is normalized (length = 1.0)
-    // Using simplified quadratic formula: t = -half_b ± sqrt(discriminant)
-    // where half_b = oc.dot(ray.direction), discriminant = half_b² - c
     let half_b = oc.dot(ray.direction);
     let c = oc.dot(oc) - radius * radius;
     let discriminant = half_b * half_b - c;
@@ -77,7 +72,6 @@ fn intersect_sphere(ray: &Ray, sphere: &Shape) -> Option<Intersection> {
     if discriminant < 0.0 {
         None
     } else {
-        // Calculate nearest intersection using simplified formula
         let t = -half_b - discriminant.sqrt();
         if t < 0.0 {
             return None;
@@ -92,7 +86,7 @@ fn intersect_sphere(ray: &Ray, sphere: &Shape) -> Option<Intersection> {
             diffuse_color: *diffuse_color,
             specular_color: *specular_color,
             shininess: *shininess,
-            is_back_face: false,  // Spheres don't have back faces in our model
+            is_back_face: false,
         })
     }
 }
@@ -107,17 +101,17 @@ fn intersect_plane(ray: &Ray, plane: &Shape) -> Option<Intersection> {
         ..
     } = plane
     else {
-        return None; // Not a plane
+        return None;
     };
 
     let denom = normal.dot(ray.direction);
     if denom.abs() < 1e-6 {
-        return None; // Ray is parallel to the plane
+        return None;
     }
 
     let t = (point - ray.origin).dot(*normal) / denom;
     if t < 0.0 {
-        return None; // Intersection is behind the ray origin
+        return None;
     }
 
     let intersection_point = ray.origin + ray.direction * t;
@@ -129,7 +123,7 @@ fn intersect_plane(ray: &Ray, plane: &Shape) -> Option<Intersection> {
         diffuse_color: *diffuse_color,
         specular_color: *specular_color,
         shininess: *shininess,
-        is_back_face: false,  // Planes are double-sided in our model
+        is_back_face: false, 
     })
 }
 
@@ -144,7 +138,7 @@ fn intersect_triangle(ray: &Ray, triangle: &Shape) -> Option<Intersection> {
         ..
     } = triangle
     else {
-        return None; // Not a triangle
+        return None;
     };
 
     let edge1 = *v1 - *v0;
@@ -153,7 +147,7 @@ fn intersect_triangle(ray: &Ray, triangle: &Shape) -> Option<Intersection> {
     let a = edge1.dot(h);
 
     if a.abs() < 1e-6 {
-        return None; // Ray is parallel to the triangle
+        return None;
     }
 
     let f = 1.0 / a;
@@ -173,13 +167,12 @@ fn intersect_triangle(ray: &Ray, triangle: &Shape) -> Option<Intersection> {
 
     let t = f * edge2.dot(q);
     if t < 0.0 {
-        return None; // Intersection is behind the ray origin
+        return None;
     }
 
     let intersection_point = ray.origin + ray.direction * t;
     let normal = edge1.cross(edge2).normalize();
     
-    // Check if we're hitting the back face of the triangle
     let is_back_face = normal.dot(ray.direction) > 0.0;
 
     Some(Intersection {

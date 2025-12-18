@@ -2,7 +2,7 @@ use crate::imgcomparator::Image;
 use crate::raytracer::config::light::Light::{Directional, Point};
 use crate::raytracer::config::Config;
 use crate::raytracer::config::Ray;
-use rayon::prelude::*; // Ensure this is imported
+use rayon::prelude::*;
 
 pub struct RayTracer {
     config: Config,
@@ -17,11 +17,8 @@ pub fn render(&self) -> Result<Image, String> {
     let width = self.config.width as usize;
     let height = self.config.height as usize;
     
-    // Create the buffer
     let mut image_data = vec![0u32; width * height];
 
-    // --- Pre-calculation (Unchanged) ---
-    // We calculate these once on the main thread to avoid re-doing math in every thread.
     let camera_vector = self.config.camera.direction().normalize();
     let normal_to_plane = camera_vector.cross(self.config.camera.up).normalize();
     let v = normal_to_plane.cross(camera_vector).normalize();
@@ -33,25 +30,17 @@ pub fn render(&self) -> Result<Image, String> {
     let img_width_by_2 = self.config.width as f32 / 2.0;
     let img_height_by_2 = self.config.height as f32 / 2.0;
 
-    // --- Parallel Rendering ---
-    // We iterate over the buffer in chunks exactly equal to the image width.
-    // Each chunk represents one horizontal scanline.
     image_data.par_chunks_mut(width)
-        .enumerate() // This gives us the row index (y)
+        .enumerate()
         .for_each(|(y, row)| {
             
-            // Optimization: 'b' depends only on 'y', so we calculate it once per row
-            // instead of once per pixel.
             let b = (pixel_height * (img_height_by_2 - (y as f32 + 0.5))) / img_height_by_2;
 
             for (x, pixel) in row.iter_mut().enumerate() {
-                // 'a' depends on 'x'
                 let a = (pixel_width * ((x as f32 + 0.5) - img_width_by_2)) / img_width_by_2;
                 
                 let d = (normal_to_plane * a + v * b + camera_vector).normalize();
                 
-                // Since `self` is shared (read-only), we can call this safely 
-                // as long as find_color doesn't mutate `self`.
                 let color = self.find_color(self.config.camera.position, d);
                 
                 *pixel = color;
@@ -114,11 +103,9 @@ pub fn render(&self) -> Result<Image, String> {
                     .iter()
                     .filter_map(|object| object.intersect(&shadow_ray))
                     .any(|shadow_intersection| {
-                        // Ignore intersections very close to the origin (epsilon check)
                         if shadow_intersection.distance < 1e-6 {
                             return false;
                         }
-                        // If we're shading a back face, ignore back-face shadow hits
                         if intersection.is_back_face && shadow_intersection.is_back_face {
                             return false;
                         }
@@ -130,16 +117,13 @@ pub fn render(&self) -> Result<Image, String> {
                         }
                     });
                 if !in_shadow {
-                    // blinn-phong shading
                     let light_color = light.color();
                     let n_dot_l = intersection.normal.dot(light_dir).max(0.0);
                     let diffuse = intersection.diffuse_color * n_dot_l;
-                    // View direction is opposite of ray direction (toward the viewer)
                     let view_dir = -direction;
                     let half_vector = (light_dir + view_dir).normalize();
                     let n_dot_h = intersection.normal.dot(half_vector).max(0.0);
                     
-                    // Handle shininess as per Java implementation
                     let specular_factor = if intersection.shininess == 1.0 {
                         n_dot_h
                     } else if intersection.shininess == 0.0 {
@@ -153,28 +137,19 @@ pub fn render(&self) -> Result<Image, String> {
                 }
             }
             
-            // Add ambient lighting to the direct lighting
             let mut final_color = light_accumulator + self.config.ambient;
             
-            // Check if the surface is reflective (has non-zero specular component)
             let is_reflective = intersection.specular_color.x > 0.0 
                 || intersection.specular_color.y > 0.0 
                 || intersection.specular_color.z > 0.0;
             
-            // Add indirect lighting (reflections) if reflective and within depth limit
             if is_reflective && depth + 1 < self.config.maxdepth {
-                // Calculate reflection direction: R = D - 2(D·N)N
-                // Note: D and N are already normalized, so R is also normalized
                 let reflect_dir = direction - 2.0 * direction.dot(intersection.normal) * intersection.normal;
                 
-                // Cast reflection ray with offset along normal to avoid self-intersection
                 let reflect_origin = intersection.point + intersection.normal * 1e-6;
                 
-                // Recursively trace the reflection ray - now returns Vec3 directly
                 let reflected_color = self.find_color_recursive(reflect_origin, reflect_dir, depth + 1);
                 
-                // Add reflection contribution: specular * reflected_color
-                // Note: This formula matches the Java implementation
                 let reflection_contribution = intersection.specular_color * reflected_color;
                 final_color += reflection_contribution;
             }
@@ -188,7 +163,6 @@ pub fn render(&self) -> Result<Image, String> {
 
 #[cfg(test)]
 mod tests {
-    // load test_file/jalon3/tp31.test and tp31.png and run the raytracer
     use super::*;
     use crate::imgcomparator::file_to_image;
     use crate::imgcomparator::save_image;
