@@ -211,8 +211,18 @@ impl GPURenderer {
         let spheres = self.extract_spheres(config);
         let lights = self.extract_lights(config);
         
+        // Check if scene contains only spheres
+        let total_objects = config.get_scene_objects().len();
+        if spheres.len() != total_objects {
+            return Err(format!(
+                "GPU rendering currently only supports scenes with spheres (found {} non-sphere objects out of {} total)",
+                total_objects - spheres.len(),
+                total_objects
+            ));
+        }
+        
         if spheres.is_empty() {
-            return Err("GPU rendering currently only supports spheres".to_string());
+            return Err("Scene contains no objects to render".to_string());
         }
 
         let scene_params = GPUSceneParams {
@@ -268,7 +278,7 @@ impl GPURenderer {
             usage: wgpu::BufferUsages::STORAGE,
         });
 
-        let output_buffer_size = (config.width * config.height * 4) as u64;
+        let output_buffer_size = (config.width * config.height * std::mem::size_of::<u32>() as u32) as u64;
         let output_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Output Buffer"),
             size: output_buffer_size,

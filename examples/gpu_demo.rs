@@ -64,7 +64,6 @@ fn main() {
                     }
                     Err(e) => {
                         eprintln!("GPU rendering failed: {}", e);
-                        eprintln!("Note: This is a minimal implementation supporting only spheres.");
                     }
                 }
             }

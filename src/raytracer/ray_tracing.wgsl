@@ -163,21 +163,11 @@ fn calculate_lighting(intersection: Intersection, view_dir: vec3<f32>) -> vec3<f
         let half_vector = normalize(light_dir + view_dir);
         let n_dot_h = max(dot(intersection.normal, half_vector), 0.0);
         
-        var specular_factor: f32;
-        if (intersection.shininess == 1.0) {
-            specular_factor = n_dot_h;
-        } else if (intersection.shininess == 0.0) {
-            if (n_dot_l > 0.0) {
-                specular_factor = n_dot_h;
-            } else {
-                specular_factor = 0.0;
-            }
-        } else {
-            if (n_dot_l > 0.0) {
-                specular_factor = pow(n_dot_h, intersection.shininess);
-            } else {
-                specular_factor = 0.0;
-            }
+        // Simplified specular calculation that handles all cases uniformly
+        var specular_factor: f32 = 0.0;
+        if (n_dot_l > 0.0) {
+            let effective_shininess = max(intersection.shininess, 1.0);
+            specular_factor = pow(n_dot_h, effective_shininess);
         }
         
         let specular = intersection.specular * specular_factor;
@@ -206,10 +196,8 @@ fn trace_ray(initial_ray: Ray, max_depth: u32) -> vec3<f32> {
         
         color = color + reflection_factor * lighting;
         
-        // Check if surface is reflective
-        let is_reflective = intersection.specular.x > 0.0 || 
-                           intersection.specular.y > 0.0 || 
-                           intersection.specular.z > 0.0;
+        // Check if surface is reflective using any() for better GPU optimization
+        let is_reflective = any(intersection.specular > vec3<f32>(0.0));
         
         if (!is_reflective || depth + 1u >= max_depth) {
             break;
