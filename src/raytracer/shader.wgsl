@@ -239,6 +239,9 @@ fn is_in_shadow(point: vec3<f32>, light_dir: vec3<f32>, light_type: u32, light_p
     for (var i = 0u; i < scene.num_triangles; i++) {
         let shadow_intersection = intersect_triangle(shadow_ray, triangles[i]);
         if (shadow_intersection.hit && shadow_intersection.distance > 1e-6) {
+            // Skip shadow if both the intersection point and shadow hit are back-faces
+            // This handles cases where we're inside a transparent/translucent object
+            // and shouldn't cast shadows on ourselves from the inside
             if (intersection.is_back_face && shadow_intersection.is_back_face) {
                 continue;
             }
@@ -290,21 +293,16 @@ fn trace_ray(initial_ray: Ray) -> vec3<f32> {
                 let half_vector = normalize(light_dir + view_dir);
                 let n_dot_h = max(dot(intersection.normal, half_vector), 0.0);
                 
+                // Calculate specular factor based on shininess
                 var specular_factor: f32;
                 if (intersection.shininess == 1.0) {
                     specular_factor = n_dot_h;
                 } else if (intersection.shininess == 0.0) {
-                    if (n_dot_l > 0.0) {
-                        specular_factor = n_dot_h;
-                    } else {
-                        specular_factor = 0.0;
-                    }
+                    // No shininess: use n_dot_h if lit, otherwise 0
+                    specular_factor = select(0.0, n_dot_h, n_dot_l > 0.0);
                 } else {
-                    if (n_dot_l > 0.0) {
-                        specular_factor = pow(n_dot_h, intersection.shininess);
-                    } else {
-                        specular_factor = 0.0;
-                    }
+                    // Standard Phong: apply power if lit, otherwise 0
+                    specular_factor = select(0.0, pow(n_dot_h, intersection.shininess), n_dot_l > 0.0);
                 }
                 
                 let specular = intersection.specular_color * specular_factor;

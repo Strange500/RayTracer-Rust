@@ -78,6 +78,8 @@ struct GpuLight {
     _padding: f32,
 }
 
+const SHADER_ENTRY_POINT: &str = "main";
+
 pub struct GpuBackend {
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -85,8 +87,15 @@ pub struct GpuBackend {
 
 impl GpuBackend {
     pub fn new() -> Result<Self, String> {
+        // Use primary backends for better stability and security
+        let backends = if cfg!(debug_assertions) {
+            wgpu::Backends::all()
+        } else {
+            wgpu::Backends::VULKAN | wgpu::Backends::METAL | wgpu::Backends::DX12
+        };
+        
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
+            backends,
             ..Default::default()
         });
 
@@ -341,7 +350,7 @@ impl GpuBackend {
                     label: Some("Ray Tracer Pipeline"),
                     layout: Some(&pipeline_layout),
                     module: &shader,
-                    entry_point: Some("main"),
+                    entry_point: Some(SHADER_ENTRY_POINT),
                     compilation_options: Default::default(),
                     cache: None,
                 });
@@ -461,41 +470,46 @@ impl GpuBackend {
         }
 
         // Ensure at least one element in each buffer (GPU requirement)
+        // Use dummy geometry that won't affect rendering
+        const DUMMY_SPHERE: GpuSphere = GpuSphere {
+            center: [0.0, 0.0, 0.0],
+            radius: 0.0,
+            diffuse_color: [0.0, 0.0, 0.0],
+            _padding1: 0.0,
+            specular_color: [0.0, 0.0, 0.0],
+            shininess: 0.0,
+        };
+        const DUMMY_PLANE: GpuPlane = GpuPlane {
+            point: [0.0, 0.0, 0.0],
+            _padding1: 0.0,
+            normal: [0.0, 1.0, 0.0],
+            _padding2: 0.0,
+            diffuse_color: [0.0, 0.0, 0.0],
+            _padding3: 0.0,
+            specular_color: [0.0, 0.0, 0.0],
+            shininess: 0.0,
+        };
+        const DUMMY_TRIANGLE: GpuTriangle = GpuTriangle {
+            v0: [0.0, 0.0, 0.0],
+            _padding1: 0.0,
+            v1: [0.0, 0.0, 0.0],
+            _padding2: 0.0,
+            v2: [0.0, 0.0, 0.0],
+            _padding3: 0.0,
+            diffuse_color: [0.0, 0.0, 0.0],
+            _padding4: 0.0,
+            specular_color: [0.0, 0.0, 0.0],
+            shininess: 0.0,
+        };
+        
         if spheres.is_empty() {
-            spheres.push(GpuSphere {
-                center: [0.0, 0.0, 0.0],
-                radius: 0.0,
-                diffuse_color: [0.0, 0.0, 0.0],
-                _padding1: 0.0,
-                specular_color: [0.0, 0.0, 0.0],
-                shininess: 0.0,
-            });
+            spheres.push(DUMMY_SPHERE);
         }
         if planes.is_empty() {
-            planes.push(GpuPlane {
-                point: [0.0, 0.0, 0.0],
-                _padding1: 0.0,
-                normal: [0.0, 1.0, 0.0],
-                _padding2: 0.0,
-                diffuse_color: [0.0, 0.0, 0.0],
-                _padding3: 0.0,
-                specular_color: [0.0, 0.0, 0.0],
-                shininess: 0.0,
-            });
+            planes.push(DUMMY_PLANE);
         }
         if triangles.is_empty() {
-            triangles.push(GpuTriangle {
-                v0: [0.0, 0.0, 0.0],
-                _padding1: 0.0,
-                v1: [0.0, 0.0, 0.0],
-                _padding2: 0.0,
-                v2: [0.0, 0.0, 0.0],
-                _padding3: 0.0,
-                diffuse_color: [0.0, 0.0, 0.0],
-                _padding4: 0.0,
-                specular_color: [0.0, 0.0, 0.0],
-                shininess: 0.0,
-            });
+            triangles.push(DUMMY_TRIANGLE);
         }
 
         let mut lights = Vec::new();
