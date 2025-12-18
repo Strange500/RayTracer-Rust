@@ -207,6 +207,9 @@ fn vec3_to_vector3(v: Vec3) -> Vector3<f32> {
 // 1. An axis-aligned bounding box (AABB) via the Bounded trait
 // 2. A way to store/retrieve its position in the BVH tree via the BHShape trait
 
+/// Size used for plane AABBs. Planes are infinite, so we use a very large but finite box.
+const PLANE_AABB_SIZE: f32 = 1e10;
+
 /// Implement Bounded trait to provide AABBs (Axis-Aligned Bounding Boxes) for each shape.
 /// The BVH uses these AABBs to quickly determine which objects a ray might intersect.
 impl Bounded<f32, 3> for Shape {
@@ -243,9 +246,8 @@ impl Bounded<f32, 3> for Shape {
                 // Planes are infinite, so we create a very large AABB.
                 // Note: Infinite primitives like planes don't benefit much from BVH,
                 // but we need to provide an AABB for the trait implementation.
-                let large = 1e10;
-                let min = Point3::new(-large, -large, -large);
-                let max = Point3::new(large, large, large);
+                let min = Point3::new(-PLANE_AABB_SIZE, -PLANE_AABB_SIZE, -PLANE_AABB_SIZE);
+                let max = Point3::new(PLANE_AABB_SIZE, PLANE_AABB_SIZE, PLANE_AABB_SIZE);
                 Aabb::with_bounds(min, max)
             }
         }
