@@ -8,9 +8,16 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let use_gpu = args.contains(&"--gpu".to_string());
     
+    // Get scene file from args or use default
+    let scene_file = args.iter()
+        .skip(1)
+        .find(|arg| !arg.starts_with("--"))
+        .map(|s| s.as_str())
+        .unwrap_or("final_avec_bonus.scene");
+    
     let mut parsed_config = ParsedConfigState::new();
-    let config = parsed_config.load_config_file("final_avec_bonus.scene").expect("Failed to load configuration");
-    println!("Configuration loaded successfully.");
+    let config = parsed_config.load_config_file(scene_file).expect("Failed to load configuration");
+    println!("Configuration loaded successfully from: {}", scene_file);
     let ray_tracer = raytracer::RayTracer::new(config);
     
     if use_gpu {
