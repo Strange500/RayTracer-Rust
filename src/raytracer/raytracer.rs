@@ -3,14 +3,25 @@ use crate::raytracer::config::light::Light::{Directional, Point};
 use crate::raytracer::config::Config;
 use crate::raytracer::config::Ray;
 use rayon::prelude::*;
+use bvh::bvh::Bvh;
+use bvh::bounding_hierarchy::BoundingHierarchy;
+use nalgebra::{Point3, Vector3};
 
 pub struct RayTracer {
     config: Config,
+    bvh: Bvh<f32, 3>,
 }
 
 impl RayTracer {
-    pub fn new(config: Config) -> Self {
-        RayTracer { config }
+    pub fn new(mut config: Config) -> Self {
+        // Build BVH from scene objects
+        let mut objects = config.get_scene_objects().clone();
+        let bvh = Bvh::build_par(&mut objects);
+        
+        // Update the config with the modified objects (they now have BVH indices)
+        *config.get_scene_objects_mut() = objects;
+        
+        RayTracer { config, bvh }
     }
 
 pub fn render(&self) -> Result<Image, String> {
@@ -66,15 +77,26 @@ pub fn render(&self) -> Result<Image, String> {
         (255 << 24) | (r << 16) | (g << 8) | b
     }
 
+    // Helper function to convert glam ray to nalgebra ray for BVH
+    fn glam_to_nalgebra_ray(origin: glam::Vec3, direction: glam::Vec3) -> bvh::ray::Ray<f32, 3> {
+        let origin_na = Point3::new(origin.x, origin.y, origin.z);
+        let direction_na = Vector3::new(direction.x, direction.y, direction.z);
+        bvh::ray::Ray::new(origin_na, direction_na)
+    }
+
     fn find_color_recursive(&self, origin: glam::Vec3, direction: glam::Vec3, depth: u32) -> glam::Vec3 {
         if depth > self.config.maxdepth {
             return glam::Vec3::ZERO;
         }
         
         let ray: Ray = Ray { origin, direction };
-        let closest_intersection = self
-            .config
-            .get_scene_objects()
+        
+        // Use BVH to get candidate objects
+        let bvh_ray = Self::glam_to_nalgebra_ray(origin, direction);
+        let candidates = self.bvh.traverse(&bvh_ray, self.config.get_scene_objects());
+        
+        // Find closest intersection among candidates
+        let closest_intersection = candidates
             .iter()
             .filter_map(|object| object.intersect(&ray))
             .min_by(|a, b| {
@@ -97,9 +119,12 @@ pub fn render(&self) -> Result<Image, String> {
                     origin: intersection.point + intersection.normal * 1e-6,
                     direction: light_dir,
                 };
-                let in_shadow = self
-                    .config
-                    .get_scene_objects()
+                
+                // Use BVH for shadow ray testing
+                let shadow_bvh_ray = Self::glam_to_nalgebra_ray(shadow_ray.origin, shadow_ray.direction);
+                let shadow_candidates = self.bvh.traverse(&shadow_bvh_ray, self.config.get_scene_objects());
+                
+                let in_shadow = shadow_candidates
                     .iter()
                     .filter_map(|object| object.intersect(&shadow_ray))
                     .any(|shadow_intersection| {

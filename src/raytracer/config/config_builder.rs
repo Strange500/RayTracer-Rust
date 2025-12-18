@@ -28,6 +28,10 @@ impl Config {
         &self.scene_objects
     }
 
+    pub fn get_scene_objects_mut(&mut self) -> &mut Vec<Shape> {
+        &mut self.scene_objects
+    }
+
     pub fn get_lights(&self) -> &Vec<Light> {
         &self.lights
     }
@@ -49,6 +53,7 @@ impl Config {
                     diffuse_color,
                     specular_color,
                     shininess,
+                    ..
                 } => {
                     println!(
                         " Object {}: Sphere - center({:?}), radius({}), diffuse_color({:?}), specular_color({:?}), shininess({})",
@@ -61,6 +66,7 @@ impl Config {
                     diffuse_color,
                     specular_color,
                     shininess,
+                    ..
                 } => {
                     println!(
                         " Object {}: Plane - point({:?}), normal({:?}), diffuse_color({:?}), specular_color({:?}), shininess({})",
@@ -74,6 +80,7 @@ impl Config {
                     diffuse_color,
                     specular_color,
                     shininess,
+                    ..
                 } => {
                     println!(
                         " Object {}: Triangle - v0({:?}), v1({:?}), v2({:?}), diffuse_color({:?}), specular_color({:?}), shininess({})",
@@ -394,6 +401,7 @@ impl ParsedConfigState {
             diffuse_color: self.diffuse_color,
             specular_color: self.specular_color,
             shininess: self.shininess,
+            node_index: 0,
         })
     }
 
@@ -420,6 +428,7 @@ impl ParsedConfigState {
             diffuse_color: self.diffuse_color,
             specular_color: self.specular_color,
             shininess: self.shininess,
+            node_index: 0,
         })
     }
 
@@ -446,6 +455,7 @@ impl ParsedConfigState {
             diffuse_color: self.diffuse_color,
             specular_color: self.specular_color,
             shininess: self.shininess,
+            node_index: 0,
         })
     }
 }

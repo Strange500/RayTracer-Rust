@@ -1,4 +1,7 @@
 use glam::Vec3;
+use bvh::aabb::{Aabb, Bounded};
+use bvh::bounding_hierarchy::BHShape;
+use nalgebra::{Point3, Vector3};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Shape {
@@ -8,6 +11,7 @@ pub enum Shape {
         diffuse_color: Vec3,
         specular_color: Vec3,
         shininess: f32,
+        node_index: usize,
     },
     Triangle {
         v0: Vec3,
@@ -16,6 +20,7 @@ pub enum Shape {
         diffuse_color: Vec3,
         specular_color: Vec3,
         shininess: f32,
+        node_index: usize,
     },
     Plane {
         point: Vec3,
@@ -23,6 +28,7 @@ pub enum Shape {
         diffuse_color: Vec3,
         specular_color: Vec3,
         shininess: f32,
+        node_index: usize,
     },
 }
 
@@ -184,4 +190,73 @@ fn intersect_triangle(ray: &Ray, triangle: &Shape) -> Option<Intersection> {
         shininess: *shininess,
         is_back_face,
     })
+}
+
+// Helper functions to convert between glam and nalgebra
+fn vec3_to_point3(v: Vec3) -> Point3<f32> {
+    Point3::new(v.x, v.y, v.z)
+}
+
+fn vec3_to_vector3(v: Vec3) -> Vector3<f32> {
+    Vector3::new(v.x, v.y, v.z)
+}
+
+// Implement Bounded trait for BVH
+impl Bounded<f32, 3> for Shape {
+    fn aabb(&self) -> Aabb<f32, 3> {
+        match self {
+            Shape::Sphere { center, radius, .. } => {
+                let half_size = Vector3::new(*radius, *radius, *radius);
+                let center_point = vec3_to_point3(*center);
+                let min = center_point - half_size;
+                let max = center_point + half_size;
+                Aabb::with_bounds(min, max)
+            }
+            Shape::Triangle { v0, v1, v2, .. } => {
+                let p0 = vec3_to_point3(*v0);
+                let p1 = vec3_to_point3(*v1);
+                let p2 = vec3_to_point3(*v2);
+                
+                let min = Point3::new(
+                    p0.x.min(p1.x).min(p2.x),
+                    p0.y.min(p1.y).min(p2.y),
+                    p0.z.min(p1.z).min(p2.z),
+                );
+                let max = Point3::new(
+                    p0.x.max(p1.x).max(p2.x),
+                    p0.y.max(p1.y).max(p2.y),
+                    p0.z.max(p1.z).max(p2.z),
+                );
+                
+                Aabb::with_bounds(min, max)
+            }
+            Shape::Plane { .. } => {
+                // Planes are infinite, so we create a very large AABB
+                // This is a limitation - planes don't work well with BVH
+                let large = 1e10;
+                let min = Point3::new(-large, -large, -large);
+                let max = Point3::new(large, large, large);
+                Aabb::with_bounds(min, max)
+            }
+        }
+    }
+}
+
+// Implement BHShape trait for BVH
+impl BHShape<f32, 3> for Shape {
+    fn set_bh_node_index(&mut self, index: usize) {
+        match self {
+            Shape::Sphere { node_index, .. } => *node_index = index,
+            Shape::Triangle { node_index, .. } => *node_index = index,
+            Shape::Plane { node_index, .. } => *node_index = index,
+        }
+    }
+
+    fn bh_node_index(&self) -> usize {
+        match self {
+            Shape::Sphere { node_index, .. } => *node_index,
+            Shape::Triangle { node_index, .. } => *node_index,
+            Shape::Plane { node_index, .. } => *node_index,
+        }
+    }
 }
