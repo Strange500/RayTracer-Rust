@@ -192,7 +192,7 @@ fn intersect_triangle(ray: &Ray, triangle: &Shape) -> Option<Intersection> {
     })
 }
 
-// Helper functions to convert between glam and nalgebra
+// Helper functions to convert between glam (used by this project) and nalgebra (used by BVH crate)
 fn vec3_to_point3(v: Vec3) -> Point3<f32> {
     Point3::new(v.x, v.y, v.z)
 }
@@ -201,11 +201,19 @@ fn vec3_to_vector3(v: Vec3) -> Vector3<f32> {
     Vector3::new(v.x, v.y, v.z)
 }
 
-// Implement Bounded trait for BVH
+// ==================== BVH Trait Implementations ====================
+// The following trait implementations enable the BVH (Bounding Volume Hierarchy)
+// acceleration structure. Each shape must provide:
+// 1. An axis-aligned bounding box (AABB) via the Bounded trait
+// 2. A way to store/retrieve its position in the BVH tree via the BHShape trait
+
+/// Implement Bounded trait to provide AABBs (Axis-Aligned Bounding Boxes) for each shape.
+/// The BVH uses these AABBs to quickly determine which objects a ray might intersect.
 impl Bounded<f32, 3> for Shape {
     fn aabb(&self) -> Aabb<f32, 3> {
         match self {
             Shape::Sphere { center, radius, .. } => {
+                // Sphere AABB: cube centered at sphere center with side length 2*radius
                 let half_size = Vector3::new(*radius, *radius, *radius);
                 let center_point = vec3_to_point3(*center);
                 let min = center_point - half_size;
@@ -213,6 +221,7 @@ impl Bounded<f32, 3> for Shape {
                 Aabb::with_bounds(min, max)
             }
             Shape::Triangle { v0, v1, v2, .. } => {
+                // Triangle AABB: minimum box that contains all three vertices
                 let p0 = vec3_to_point3(*v0);
                 let p1 = vec3_to_point3(*v1);
                 let p2 = vec3_to_point3(*v2);
@@ -231,8 +240,9 @@ impl Bounded<f32, 3> for Shape {
                 Aabb::with_bounds(min, max)
             }
             Shape::Plane { .. } => {
-                // Planes are infinite, so we create a very large AABB
-                // This is a limitation - planes don't work well with BVH
+                // Planes are infinite, so we create a very large AABB.
+                // Note: Infinite primitives like planes don't benefit much from BVH,
+                // but we need to provide an AABB for the trait implementation.
                 let large = 1e10;
                 let min = Point3::new(-large, -large, -large);
                 let max = Point3::new(large, large, large);
@@ -242,7 +252,8 @@ impl Bounded<f32, 3> for Shape {
     }
 }
 
-// Implement BHShape trait for BVH
+/// Implement BHShape trait to allow shapes to store their position in the BVH tree.
+/// The BVH library needs to track which tree node each shape belongs to.
 impl BHShape<f32, 3> for Shape {
     fn set_bh_node_index(&mut self, index: usize) {
         match self {

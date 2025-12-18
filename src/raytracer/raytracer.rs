@@ -7,14 +7,27 @@ use bvh::bvh::Bvh;
 use bvh::bounding_hierarchy::BoundingHierarchy;
 use nalgebra::{Point3, Vector3};
 
+/// RayTracer with BVH (Bounding Volume Hierarchy) acceleration structure.
+/// 
+/// The BVH organizes scene objects into a binary tree based on their spatial positions,
+/// enabling efficient ray-object intersection tests. Instead of testing against all objects
+/// (O(n) complexity), the BVH reduces this to O(log n) on average by quickly culling
+/// large portions of the scene that a ray cannot intersect.
 pub struct RayTracer {
     config: Config,
+    /// BVH acceleration structure for fast ray-object intersection queries.
+    /// Built once during initialization using Surface Area Heuristic (SAH) for optimal partitioning.
     bvh: Bvh<f32, 3>,
 }
 
 impl RayTracer {
+    /// Creates a new RayTracer and builds the BVH acceleration structure.
+    /// 
+    /// The BVH is constructed using parallel processing (via rayon) for better performance
+    /// with large scenes. The construction uses SAH (Surface Area Heuristic) to determine
+    /// optimal split planes, resulting in efficient traversal during rendering.
     pub fn new(mut config: Config) -> Self {
-        // Build BVH from scene objects
+        // Build BVH from scene objects using parallel construction
         let mut objects = config.get_scene_objects().clone();
         let bvh = Bvh::build_par(&mut objects);
         
@@ -77,7 +90,10 @@ pub fn render(&self) -> Result<Image, String> {
         (255 << 24) | (r << 16) | (g << 8) | b
     }
 
-    // Helper function to convert glam ray to nalgebra ray for BVH
+    /// Helper function to convert glam Vec3 ray to nalgebra ray for BVH traversal.
+    /// 
+    /// The BVH library uses nalgebra for its math types, while this project uses glam.
+    /// This conversion is a lightweight operation (just copying 6 floats).
     fn glam_to_nalgebra_ray(origin: glam::Vec3, direction: glam::Vec3) -> bvh::ray::Ray<f32, 3> {
         let origin_na = Point3::new(origin.x, origin.y, origin.z);
         let direction_na = Vector3::new(direction.x, direction.y, direction.z);
@@ -91,11 +107,13 @@ pub fn render(&self) -> Result<Image, String> {
         
         let ray: Ray = Ray { origin, direction };
         
-        // Use BVH to get candidate objects
+        // Use BVH to get candidate objects that the ray might intersect.
+        // This is the key optimization: instead of testing all objects, the BVH
+        // quickly identifies only the objects whose bounding boxes intersect the ray.
         let bvh_ray = Self::glam_to_nalgebra_ray(origin, direction);
         let candidates = self.bvh.traverse(&bvh_ray, self.config.get_scene_objects());
         
-        // Find closest intersection among candidates
+        // Find closest intersection among candidates returned by BVH
         let closest_intersection = candidates
             .iter()
             .filter_map(|object| object.intersect(&ray))
@@ -120,7 +138,9 @@ pub fn render(&self) -> Result<Image, String> {
                     direction: light_dir,
                 };
                 
-                // Use BVH for shadow ray testing
+                // Use BVH for shadow ray testing. This is particularly beneficial for complex
+                // scenes with many objects, as shadow rays are cast for every intersection point
+                // and every light source. BVH drastically reduces the number of intersection tests.
                 let shadow_bvh_ray = Self::glam_to_nalgebra_ray(shadow_ray.origin, shadow_ray.direction);
                 let shadow_candidates = self.bvh.traverse(&shadow_bvh_ray, self.config.get_scene_objects());
                 
@@ -295,6 +315,39 @@ mod tests {
         test_file("test_file/jalon6/tp64");
     }
 
+    /// Benchmark test to demonstrate BVH performance improvement.
+    /// This test measures rendering time and logs it for comparison.
+    #[test]
+    fn test_bvh_performance_benchmark() {
+        // Use a complex scene for benchmarking
+        let scene_file = "test_file/jalon6/tp64.test";
+        let mut parsed_config = ParsedConfigState::new();
+        let config = parsed_config
+            .load_config_file(&scene_file)
+            .expect("Failed to load configuration");
+        
+        let object_count = config.get_scene_objects().len();
+        println!("\n=== BVH Performance Benchmark ===");
+        println!("Scene: {}", scene_file);
+        println!("Number of objects: {}", object_count);
+        
+        // Benchmark with BVH
+        let ray_tracer = RayTracer::new(config);
+        let start_time = std::time::Instant::now();
+        let _result = ray_tracer.render().expect("Failed to render image");
+        let duration = start_time.elapsed();
+        
+        println!("Render time with BVH: {:?}", duration);
+        println!("Expected speedup: O(log n) vs O(n) for {} objects", object_count);
+        println!("Theoretical complexity: O(log₂({})) ≈ {:.1} vs O({})", 
+                 object_count, 
+                 (object_count as f64).log2(), 
+                 object_count);
+        println!("=================================\n");
+        
+        // The test passes if rendering completes successfully
+        assert!(duration.as_secs() < 300, "Rendering took too long (>5 minutes)");
+    }
 
 
     fn test_file(path: &str) {
