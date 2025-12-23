@@ -120,6 +120,9 @@ fn intersect_plane(ray: &Ray, plane: &Shape) -> Option<Intersection> {
     }
 
     let intersection_point = ray.origin + ray.direction * t;
+    
+    // Check if we're hitting the plane from the back side
+    let is_back_face = denom > 0.0;
 
     Some(Intersection {
         distance: t,
@@ -128,7 +131,7 @@ fn intersect_plane(ray: &Ray, plane: &Shape) -> Option<Intersection> {
         diffuse_color: *diffuse_color,
         specular_color: *specular_color,
         shininess: *shininess,
-        is_back_face: false, 
+        is_back_face,
     })
 }
 

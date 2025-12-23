@@ -87,7 +87,7 @@ pub fn render(&self) -> Result<Image, String> {
         let r = (color_vec.x.max(0.0).min(1.0) * 255.0).round() as u32;
         let g = (color_vec.y.max(0.0).min(1.0) * 255.0).round() as u32;
         let b = (color_vec.z.max(0.0).min(1.0) * 255.0).round() as u32;
-        (255 << 24) | (r << 16) | (g << 8) | b
+        (r << 16) | (g << 8) | b
     }
 
     /// Helper function to create a BVH ray from Vector3 origin and direction.
